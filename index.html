@@ -95,6 +95,7 @@ a{color:var(--accent)}
       <p class="sub">อัปโหลดไฟล์ report_appointment ประจำวัน ระบบจะเทียบแขวง/เขตที่ช่องทางส่งมา กับที่อยู่ที่ลูกค้าพิมพ์เอง รหัสไปรษณีย์ และหมุดแผนที่ แล้วชี้ออเดอร์ที่เขตน่าจะผิด</p>
     </div>
     <div class="controls">
+      <button class="btn hidden" id="xlsxBtn" type="button">ดาวน์โหลด Excel</button>
       <button class="btn ghost hidden" id="copyBtn" type="button">คัดลอกผลไปวาง Excel</button>
     </div>
   </header>
@@ -543,7 +544,7 @@ a{color:var(--accent)}
 const $=id=>document.getElementById(id);
 const LV={3:'เขตผิด',2:'ควรตรวจ',1:'ข้อมูลเพิ่ม',0:'ปกติ'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
+let SRCNAME='', IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
 const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textContent=`กำลังโหลดข้อมูลแขวง/เขต ${d}/${n} …`; })
   .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
   .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
@@ -551,7 +552,7 @@ function ix(){ return IX; }
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 
 function readFile(f){
-  $('fileInfo').textContent='กำลังอ่าน '+f.name+' …';
+  $('fileInfo').textContent='กำลังอ่าน '+f.name+' …'; SRCNAME=f.name;
   const r=new FileReader();
   r.onload=e=>{
     try{
@@ -573,7 +574,7 @@ function run(){
   RAW.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
   RES=AddrCheck.crossCheck([...byId.values()].map(({r,lines,total})=>Object.assign({r,lines,total},AddrCheck.checkOrder(r,I,{pinToleranceM:tol}))));
   const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
-  $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden');
+  $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden'); $('xlsxBtn').classList.remove('hidden');
   const chs=[...new Set(RES.map(x=>x.r.CHANNEL))].sort(); $('fCh').innerHTML='<option value="">ทั้งหมด</option>'+chs.map(c=>`<option>${esc(c)}</option>`).join('');
   const amps=[...new Set(RES.map(x=>x.r.AUMPHER))].sort((a,b)=>a.localeCompare(b,'th')); $('fAmp').innerHTML='<option value="">ทั้งหมด</option>'+amps.map(c=>`<option>${esc(c)}</option>`).join('');
   summary(); filter();
@@ -620,11 +621,33 @@ function more(){
   $('count').textContent=`แสดง ${shown.toLocaleString()} จาก ${view.length.toLocaleString()} ออเดอร์`;
   $('more').classList.toggle('hidden',shown>=view.length);
 }
+const HEAD=['ระดับ','ORDERID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
+const LVNAME=x=>x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
+function rowsOf(list){ return list.map(x=>[LVNAME(x),x.r.ORDERID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,'','','']); }
 function copyTSV(){
-  const h=['ระดับ','ORDERID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
   const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
-  const lines=[h.join('\t')].concat(view.map(x=>[x.unverifiable?'ตรวจไม่ได้':LV[x.lvl],x.r.ORDERID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,'','',''].map(cl).join('\t')));
+  const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
   navigator.clipboard.writeText(lines.join('\n')).then(()=>toast(`คัดลอก ${view.length} ออเดอร์แล้ว วางใน Excel ได้เลย`),()=>toast('คัดลอกไม่ได้ ลองใหม่อีกครั้ง'));
+}
+function downloadXLSX(){
+  try{
+    const wb=XLSX.utils.book_new();
+    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,26,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
+    const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
+    const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||[0,0,0]; ch[k][0]++; if(x.lvl===3)ch[k][1]++; if(x.lvl===2)ch[k][2]++;});
+    const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
+    const sum=[['ไฟล์ต้นทาง',SRCNAME],['ตรวจเมื่อ',new Date().toLocaleString('th-TH')],['ออเดอร์ทั้งหมด',RES.length],[]]
+      .concat(Object.entries(c).map(([k,v])=>[k,v])).concat([[],['ช่องทาง','ออเดอร์','เขตผิด','ควรตรวจ']]).concat(Object.entries(ch).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[k].concat(v)))
+      .concat([[],['เขตในระบบ → เขตที่ควรเป็น','จำนวน']]).concat(Object.entries(pr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]));
+    const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws0,'สรุป');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.lvl>=2)),'ต้องแก้-ตรวจ');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.unverifiable)),'ตรวจไม่ได้');
+    XLSX.utils.book_append_sheet(wb,mk(RES),'ทั้งหมด');
+    const m=String(SRCNAME).match(/(20\d{6})/); const d=m?m[1]:new Date().toISOString().slice(0,10).replace(/-/g,'');
+    XLSX.writeFile(wb,`ผลตรวจเขต_${d}.xlsx`);
+    toast('กำลังดาวน์โหลดไฟล์ Excel');
+  }catch(e){ toast('ดาวน์โหลดไม่ได้ในหน้านี้ ใช้ปุ่มคัดลอกแทน'); }
 }
 $('file').onchange=e=>{if(e.target.files[0]) readFile(e.target.files[0]);};
 const d=$('drop');
@@ -634,7 +657,7 @@ d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) readFile(f)
 $('tol').onchange=()=>{if(RAW) run();};
 ['q'].forEach(id=>$(id).addEventListener('input',filter));
 ['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
-$('more').onclick=more; $('copyBtn').onclick=copyTSV;
+$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX;
 })();
 </script>
 </body>
