@@ -73,7 +73,7 @@ table.main tr.l1 td:first-child{box-shadow:inset 4px 0 0 var(--info)}
 .p3{background:var(--crit-bg);color:var(--crit)} .p2{background:var(--warn-bg);color:var(--warn)} .p1{background:var(--info-bg);color:var(--info)} .p0{background:var(--ok-bg);color:var(--ok)}
 .av{font-size:13px;margin-bottom:4px;color:var(--muted)} .av.bad b{color:var(--crit)} .av.good b{color:var(--ok)}
 .iss{margin:0;padding-left:16px} .iss li{margin:2px 0}
-.iss li.i3{color:var(--crit)} .iss li.i2{color:var(--warn)} .iss li.i1{color:var(--muted)}
+.iss li.i0{color:var(--muted)} .iss li.i3{color:var(--crit)} .iss li.i2{color:var(--warn)} .iss li.i1{color:var(--muted)}
 .sys b{font-weight:600}
 .sug{color:var(--ok);font-weight:500} .sug b{font-weight:700} .sug small{display:block;font-weight:400;color:var(--muted);margin-top:2px}
 .addr{max-width:380px;color:var(--ink)}
@@ -121,7 +121,7 @@ a{color:var(--accent)}
       <div><span class="pill p2">ควรตรวจ</span><span>ตัวเสริมพบข้อขัดแย้ง: แขวงกับเขตในระบบไม่เข้าคู่, หมุดส่งครั้งก่อนอยู่เขตอื่น, รหัสไปรษณีย์ไม่ตรง, ลูกค้าเขียนหลายเขต หรือลูกค้าคนเดียวได้เขตต่างกัน</span></div>
       <div><span class="pill p1">ข้อมูลเพิ่ม</span><span>แขวงไม่ตรงแต่ยังเป็นเขตเดียวกัน, หมุดคลาดเคลื่อนแต่ที่อยู่ยืนยันเขตถูก, หมุดใกล้รอยต่อเขต</span></div>
       <div><span class="pill pna">ตรวจไม่ได้</span><span>ที่อยู่ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ และไม่มีหมุด ต้องถามลูกค้าตอนโทรนัด</span></div>
-      <div><span class="pill p0">ปกติ</span><span>มีข้อมูลให้ตรวจ และไม่พบข้อขัดแย้ง</span></div>
+      <div><span class="pill p0">ปกติ</span><span>ที่อยู่ลูกค้าตรงกับ AUMPHER (ถือว่าถูกต้อง สิ่งที่ตัวเสริมเจอเป็นแค่หมายเหตุ) หรือมีข้อมูลให้ตรวจแต่ไม่พบข้อขัดแย้ง</span></div>
       <div><span class="pill p1">หมายเหตุหมุด</span><span>หมุดคือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ อาจคลาดจากบ้านหรือเป็นที่อยู่เดิม จึงใช้เป็นหลักฐานรอง</span></div>
     </div>
   </section>
@@ -527,6 +527,8 @@ a{color:var(--accent)}
     else if (statedA.length) addrVsAmp = statedA.includes(A) ? (statedA.length > 1 ? 'ระบุหลายเขต' : 'ตรง') : 'ไม่ตรง (ลูกค้าเขียนเขต ' + statedA.join('/') + ')';
     else if (tAmps.length) addrVsAmp = tAmps.includes(A) ? 'ตรง (ดูจากแขวง)' : (tAmps.length > 1 ? 'ไม่ชัด (ชื่อแขวงนี้มีในเขต ' + tAmps.join('/') + ')' : 'ไม่ตรง (แขวงที่เขียนอยู่เขต ' + tAmps[0] + ')');
     else addrVsAmp = 'ลูกค้าไม่ได้ระบุเขต/แขวง';
+    // customer address matches AUMPHER → treat as correct; other findings stay as notes only
+    if (/^ตรง/.test(addrVsAmp)) issues.forEach(i => { i.lvl = 0; });
     const lvl = issues.reduce((m, i) => Math.max(m, i.lvl), 0);
     const evidence = statedA.length + statedT.length + zipsTxt.length + (pin ? 1 : 0);
     return { lvl, issues, cust, pin, suggest, addrVsAmp, unverifiable: lvl === 0 && evidence === 0 };
@@ -538,8 +540,9 @@ a{color:var(--accent)}
     groups.forEach(g => {
       const amps = [...new Set(g.map(x => x.r.AUMPHER))];
       if (g.length > 1 && amps.length > 1) g.forEach(x => {
-        x.issues.push({ lvl: 2, code: 'SAME_CUST', msg: `ลูกค้าคนเดียวกัน ที่อยู่เดียวกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ (${amps.join(' / ')})` });
-        x.lvl = Math.max(x.lvl, 2); x.unverifiable = false;
+        const ok = /^ตรง/.test(x.addrVsAmp || '');
+        x.issues.push({ lvl: ok ? 0 : 2, code: 'SAME_CUST', msg: `ลูกค้าคนเดียวกัน ที่อยู่เดียวกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ (${amps.join(' / ')})` });
+        if (!ok) { x.lvl = Math.max(x.lvl, 2); x.unverifiable = false; }
       });
     });
     return list;
