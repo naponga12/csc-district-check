@@ -49,7 +49,7 @@ h1{font-size:24px;margin:0;text-wrap:balance;font-weight:700}
 .tile.c1{border-left-color:var(--info)}
 .tile.c0{border-left-color:var(--ok)} .tile.c0 .n{color:var(--ok)}
 .tile[aria-pressed="true"]{outline:2px solid var(--accent)}
-.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}
 @media (max-width:860px){.two{grid-template-columns:1fr}}
 h2{font-size:16px;margin:0 0 10px}
 .mini{width:100%;border-collapse:collapse;font-size:14px}
@@ -606,14 +606,18 @@ function summary(){
   $('tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{$('fLvl').value=b.dataset.l;filter();});
   const dz=dropOrders(); $('dropNote').textContent=dz.total?`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')} · ไม่ได้ตรวจ ${dz.total.toLocaleString()} ออเดอร์ (${dz.text})`:`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')}`;
   // channel table
-  const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||{n:0,3:0,2:0}; ch[k].n++; if(x.lvl>=2) ch[k][x.lvl]++;});
-  $('byChannel').innerHTML='<table class="mini"><thead><tr><th>ช่องทาง</th><th class="num">ออเดอร์</th><th class="num">เขตผิด</th><th class="num">ควรตรวจ</th><th class="num">% เขตผิด</th></tr></thead><tbody>'+
-    Object.entries(ch).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${v.n.toLocaleString()}</td><td class="num">${v[3]}</td><td class="num">${v[2]}</td><td class="num">${(v[3]/v.n*100).toFixed(1)}%</td></tr>`).join('')+'</tbody></table>';
+  const ch=chanCounts(); const tot={n:0}; ST.forEach(k=>tot[k]=0); Object.values(ch).forEach(v=>{tot.n+=v.n; ST.forEach(k=>tot[k]+=v[k]);});
+  const cell=(v,k)=>`<td class="num">${v[k].toLocaleString()}</td>`;
+  $('byChannel').innerHTML='<div style="overflow-x:auto"><table class="mini"><thead><tr><th>ช่องทาง</th><th class="num">ออเดอร์</th>'+ST.map(k=>`<th class="num">${k}</th>`).join('')+'<th class="num">% เขตผิด</th></tr></thead><tbody>'+
+    Object.entries(ch).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${v.n.toLocaleString()}</td>${ST.map(s=>cell(v,s)).join('')}<td class="num">${(v['เขตผิด']/v.n*100).toFixed(1)}%</td></tr>`).join('')+
+    `<tr style="font-weight:600"><td>รวม</td><td class="num">${tot.n.toLocaleString()}</td>${ST.map(s=>cell(tot,s)).join('')}<td class="num">${(tot['เขตผิด']/Math.max(1,tot.n)*100).toFixed(1)}%</td></tr></tbody></table></div>`;
   // pair table
   const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
   const top=Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,10), mx=top.length?top[0][1]:1;
   $('byPair').innerHTML=top.length?'<table class="mini"><tbody>'+top.map(([k,n])=>`<tr><td style="width:55%">${esc(k)}</td><td><div class="bar" style="width:${Math.max(4,n/mx*100)}%"></div></td><td class="num">${n}</td></tr>`).join('')+'</tbody></table><p class="muted" style="font-size:13px;margin:8px 0 0">ถ้าคู่เดิมโผล่ซ้ำทุกวัน มักเป็นการแมปรหัสไปรษณีย์เป็นเขตเดียวของช่องทาง ควรแจ้งแก้ที่ต้นทาง</p>':'<p class="muted">ไม่พบ</p>';
 }
+const ST=['เขตผิด','ควรตรวจ','ตรวจไม่ได้','ข้อมูลเพิ่ม','ปกติ'];
+function chanCounts(){ const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; if(!ch[k]){ch[k]={n:0}; ST.forEach(s=>ch[k][s]=0);} ch[k].n++; ch[k][x.unverifiable?'ตรวจไม่ได้':LV[x.lvl]]++;}); return ch; }
 function dropOrders(){ // DROPPED counts rows; convert to orders
   const ids={}; RAW.forEach(r=>{const c=String(r.COMPANY_ID||'').trim(); if(!AddrCheck.COMPANIES.includes(c)&&('COMPANY_ID' in r)){ (ids[c||'(ว่าง)']=ids[c||'(ว่าง)']||new Set()).add(r.ORDERID||r.ORDERID_ORG); }});
   const e=Object.entries(ids).map(([k,v])=>[k,v.size]); return {total:e.reduce((a,b)=>a+b[1],0), text:e.map(([k,v])=>`${k} ${v.toLocaleString()}`).join(', '), list:e};
@@ -659,13 +663,13 @@ function downloadXLSX(){
     const wb=XLSX.utils.book_new();
     const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
     const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
-    const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||[0,0,0]; ch[k][0]++; if(x.lvl===3)ch[k][1]++; if(x.lvl===2)ch[k][2]++;});
+    const chc=chanCounts(); const ch={}; Object.entries(chc).forEach(([k,v])=>ch[k]=[v.n].concat(ST.map(s=>v[s])));
     const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
     const dz=dropOrders();
     const sum=[['ไฟล์ต้นทาง',SRCNAME],['ตรวจเมื่อ',new Date().toLocaleString('th-TH')],['COMPANY_ID ที่ตรวจ',AddrCheck.COMPANIES.join(', ')],['ออเดอร์ที่ตรวจ',RES.length],['ไม่ได้ตรวจ (COMPANY_ID อื่น)',dz.total]].concat(dz.list.map(([k,v])=>['   '+k,v])).concat([[]])
-      .concat(Object.entries(c).map(([k,v])=>[k,v])).concat([[],['ช่องทาง','ออเดอร์','เขตผิด','ควรตรวจ']]).concat(Object.entries(ch).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[k].concat(v)))
+      .concat(Object.entries(c).map(([k,v])=>[k,v])).concat([[],['ช่องทาง','ออเดอร์'].concat(ST)]).concat(Object.entries(ch).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[k].concat(v)))
       .concat([[],['เขตในระบบ → เขตที่ควรเป็น','จำนวน']]).concat(Object.entries(pr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]));
-    const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10}];
+    const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10}];
     XLSX.utils.book_append_sheet(wb,ws0,'สรุป');
     XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.lvl>=2)),'ต้องแก้-ตรวจ');
     XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.unverifiable)),'ตรวจไม่ได้');
