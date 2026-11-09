@@ -71,6 +71,7 @@ table.main tr.l1 td:first-child{box-shadow:inset 4px 0 0 var(--info)}
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
 .pna{background:transparent;color:var(--muted);border:1px dashed var(--muted)} .tile.cna{border-left-color:var(--muted);border-left-style:dashed}
 .p3{background:var(--crit-bg);color:var(--crit)} .p2{background:var(--warn-bg);color:var(--warn)} .p1{background:var(--info-bg);color:var(--info)} .p0{background:var(--ok-bg);color:var(--ok)}
+.av{font-size:13px;margin-bottom:4px;color:var(--muted)} .av.bad b{color:var(--crit)} .av.good b{color:var(--ok)}
 .iss{margin:0;padding-left:16px} .iss li{margin:2px 0}
 .iss li.i3{color:var(--crit)} .iss li.i2{color:var(--warn)} .iss li.i1{color:var(--muted)}
 .sys b{font-weight:600}
@@ -116,8 +117,8 @@ a{color:var(--accent)}
   <section id="intro" class="card">
     <h2>ระบบตรวจอะไรบ้าง</h2>
     <div class="legend">
-      <div><span class="pill p3">เขตผิด</span><span>ที่อยู่ที่ลูกค้าพิมพ์ระบุ เขต/อำเภอ หรือแขวงของเขตอื่น, หรือแขวงกับเขตในระบบไม่สัมพันธ์กัน (เช่น แขวงรังสิต + เขตคลองหลวง)</span></div>
-      <div><span class="pill p2">ควรตรวจ</span><span>ข้อความไม่ได้บอกเขต แต่หมุดแผนที่อยู่ในเขตอื่นเกินระยะที่ตั้งไว้, หรือรหัสไปรษณีย์ไม่ตรงกับเขต</span></div>
+      <div><span class="pill p3">เขตผิด</span><span>ที่อยู่ที่ลูกค้าเขียน (เขต แขวง หรือจังหวัด) ไม่ตรงกับเขตในช่อง AUMPHER — มาจากการเทียบนี้อย่างเดียว</span></div>
+      <div><span class="pill p2">ควรตรวจ</span><span>ตัวเสริมพบข้อขัดแย้ง: แขวงกับเขตในระบบไม่เข้าคู่, หมุดส่งครั้งก่อนอยู่เขตอื่น, รหัสไปรษณีย์ไม่ตรง, ลูกค้าเขียนหลายเขต หรือลูกค้าคนเดียวได้เขตต่างกัน</span></div>
       <div><span class="pill p1">ข้อมูลเพิ่ม</span><span>แขวงไม่ตรงแต่ยังเป็นเขตเดียวกัน, หมุดคลาดเคลื่อนแต่ที่อยู่ยืนยันเขตถูก, หมุดใกล้รอยต่อเขต</span></div>
       <div><span class="pill pna">ตรวจไม่ได้</span><span>ที่อยู่ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ และไม่มีหมุด ต้องถามลูกค้าตอนโทรนัด</span></div>
       <div><span class="pill p0">ปกติ</span><span>มีข้อมูลให้ตรวจ และไม่พบข้อขัดแย้ง</span></div>
@@ -127,6 +128,7 @@ a{color:var(--accent)}
 
   <section id="results" class="hidden" style="display:grid;gap:18px">
     <div class="tiles" id="tiles"></div>
+    <p class="muted" id="dropNote" style="margin:-8px 0 0;font-size:13px"></p>
     <div class="two">
       <div class="card"><h2>แยกตามช่องทาง</h2><div id="byChannel"></div></div>
       <div class="card"><h2>เขตในระบบ → เขตที่ควรเป็น (พบบ่อย)</h2><div id="byPair"></div></div>
@@ -516,9 +518,18 @@ a{color:var(--accent)}
     else { const az = ix.ampZips.get(key(sa) + '|' + key(sp)); if (az) sz = zipsTxt.find(z => az.has(z)) || (az.has(Z) ? Z : (az.size === 1 ? [...az][0] : null)); }
     const changed = best || (st && key(st.t) !== T) || (sz && sz !== Z && issues.some(i => i.code === 'SYS_ZIP'));
     const suggest = changed ? { a: sa, p: sp, t: st ? st.t : null, zip: sz, src, ampChanged: !!best } : null;
+    // PRIMARY CHECK: what the customer wrote vs AUMPHER. Only this can make "เขตผิด".
+    const PRIMARY = new Set(['TXT_AMP', 'TXT_TAMB_A', 'TXT_PROV']);
+    issues.forEach(i => { if (i.lvl === 3 && !PRIMARY.has(i.code)) i.lvl = 2; });
+    let addrVsAmp;
+    const tAmps = [...new Set(statedT.flatMap(n => (ix.tamb.get(n) || []).filter(r => key(r.p) === ctxP || key(r.p) === P).map(r => key(r.a))))];
+    if (statedP.length && !statedP.includes(P)) addrVsAmp = 'ไม่ตรง (จังหวัดอื่น)';
+    else if (statedA.length) addrVsAmp = statedA.includes(A) ? (statedA.length > 1 ? 'ระบุหลายเขต' : 'ตรง') : 'ไม่ตรง (ลูกค้าเขียนเขต ' + statedA.join('/') + ')';
+    else if (tAmps.length) addrVsAmp = tAmps.includes(A) ? 'ตรง (ดูจากแขวง)' : (tAmps.length > 1 ? 'ไม่ชัด (ชื่อแขวงนี้มีในเขต ' + tAmps.join('/') + ')' : 'ไม่ตรง (แขวงที่เขียนอยู่เขต ' + tAmps[0] + ')');
+    else addrVsAmp = 'ลูกค้าไม่ได้ระบุเขต/แขวง';
     const lvl = issues.reduce((m, i) => Math.max(m, i.lvl), 0);
     const evidence = statedA.length + statedT.length + zipsTxt.length + (pin ? 1 : 0);
-    return { lvl, issues, cust, pin, suggest, unverifiable: lvl === 0 && evidence === 0 };
+    return { lvl, issues, cust, pin, suggest, addrVsAmp, unverifiable: lvl === 0 && evidence === 0 };
   }
 
   function crossCheck(list) { // list of {r, ...checkOrder result}
@@ -533,9 +544,16 @@ a{color:var(--accent)}
     });
     return list;
   }
+  const COMPANIES = ['1247', '1230'];
+  function companyFilter(rows) { // keep only the companies CSC handles
+    if (!rows.length || !('COMPANY_ID' in rows[0])) return { keep: rows, dropped: {}, hasCol: false };
+    const keep = [], dropped = {};
+    rows.forEach(r => { const c = String(r.COMPANY_ID || '').trim(); if (COMPANIES.includes(c)) keep.push(r); else dropped[c || '(ว่าง)'] = (dropped[c || '(ว่าง)'] || 0) + 1; });
+    return { keep, dropped, hasCol: true };
+  }
   const REQUIRED = ['ORDERID', 'CHANNEL', 'ADDRESS', 'TUMBOL', 'AUMPHER', 'PROVICE', 'ZIPCODE'];
   const OPTIONAL = ['LatLng', 'TEL', 'CUSTOMER_NAME'];
-  root.AddrCheck = { buildIndex, checkOrder, crossCheck, REQUIRED, OPTIONAL, norm, key };
+  root.AddrCheck = { buildIndex, checkOrder, crossCheck, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
   if (typeof module !== 'undefined') module.exports = root.AddrCheck;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -544,7 +562,7 @@ a{color:var(--accent)}
 const $=id=>document.getElementById(id);
 const LV={3:'เขตผิด',2:'ควรตรวจ',1:'ข้อมูลเพิ่ม',0:'ปกติ'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let SRCNAME='', IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
+let DROPPED={}, SRCNAME='', IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
 const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textContent=`กำลังโหลดข้อมูลแขวง/เขต ${d}/${n} …`; })
   .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
   .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
@@ -571,7 +589,9 @@ function readFile(f){
 }
 function run(){
   const tol=+$('tol').value||0, I=ix(), byId=new Map();
-  RAW.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
+  const cf=AddrCheck.companyFilter(RAW); DROPPED=cf.dropped;
+  if(!cf.hasCol) toast('ไม่พบคอลัมน์ COMPANY_ID — ตรวจทุกออเดอร์');
+  cf.keep.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
   RES=AddrCheck.crossCheck([...byId.values()].map(({r,lines,total})=>Object.assign({r,lines,total},AddrCheck.checkOrder(r,I,{pinToleranceM:tol}))));
   const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
   $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden'); $('xlsxBtn').classList.remove('hidden');
@@ -584,6 +604,7 @@ function summary(){
   const t=[['all',RES.length,'ออเดอร์ทั้งหมด',''],['3',c[3],'เขตผิด','c3'],['2',c[2],'ควรตรวจ','c2'],['na',c.na,'ตรวจไม่ได้ (ไม่มีข้อมูล)','cna'],['1',c[1],'ข้อมูลเพิ่ม','c1'],['0',c[0],'ปกติ','c0']];
   $('tiles').innerHTML=t.map(([k,n,l,cl])=>`<button type="button" class="tile ${cl}" data-l="${k}" aria-pressed="false"><div class="n">${n.toLocaleString()}</div><div class="l">${l}</div></button>`).join('');
   $('tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{$('fLvl').value=b.dataset.l;filter();});
+  const dz=dropOrders(); $('dropNote').textContent=dz.total?`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')} · ไม่ได้ตรวจ ${dz.total.toLocaleString()} ออเดอร์ (${dz.text})`:`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')}`;
   // channel table
   const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||{n:0,3:0,2:0}; ch[k].n++; if(x.lvl>=2) ch[k][x.lvl]++;});
   $('byChannel').innerHTML='<table class="mini"><thead><tr><th>ช่องทาง</th><th class="num">ออเดอร์</th><th class="num">เขตผิด</th><th class="num">ควรตรวจ</th><th class="num">% เขตผิด</th></tr></thead><tbody>'+
@@ -592,6 +613,10 @@ function summary(){
   const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
   const top=Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,10), mx=top.length?top[0][1]:1;
   $('byPair').innerHTML=top.length?'<table class="mini"><tbody>'+top.map(([k,n])=>`<tr><td style="width:55%">${esc(k)}</td><td><div class="bar" style="width:${Math.max(4,n/mx*100)}%"></div></td><td class="num">${n}</td></tr>`).join('')+'</tbody></table><p class="muted" style="font-size:13px;margin:8px 0 0">ถ้าคู่เดิมโผล่ซ้ำทุกวัน มักเป็นการแมปรหัสไปรษณีย์เป็นเขตเดียวของช่องทาง ควรแจ้งแก้ที่ต้นทาง</p>':'<p class="muted">ไม่พบ</p>';
+}
+function dropOrders(){ // DROPPED counts rows; convert to orders
+  const ids={}; RAW.forEach(r=>{const c=String(r.COMPANY_ID||'').trim(); if(!AddrCheck.COMPANIES.includes(c)&&('COMPANY_ID' in r)){ (ids[c||'(ว่าง)']=ids[c||'(ว่าง)']||new Set()).add(r.ORDERID||r.ORDERID_ORG); }});
+  const e=Object.entries(ids).map(([k,v])=>[k,v.size]); return {total:e.reduce((a,b)=>a+b[1],0), text:e.map(([k,v])=>`${k} ${v.toLocaleString()}`).join(', '), list:e};
 }
 function filter(){
   lvlFilter=$('fLvl').value; const q=$('q').value.trim().toLowerCase(), ch=$('fCh').value, amp=$('fAmp').value;
@@ -613,7 +638,7 @@ function row(x){
   <td><div class="mono">${esc(r.ORDERID)}</div><div class="muted" style="font-size:13px">${esc(r.CHANNEL)} · ${esc(r.CUSTOMER_NAME)}</div></td>
   <td class="sys">แขวง <b>${esc(r.TUMBOL)||'—'}</b><br>เขต <b>${esc(r.AUMPHER)}</b><br><span class="muted">${esc(r.PROVICE)} ${esc(r.ZIPCODE)}</span></td>
   <td class="addr">${esc(x.cust)||'<span class="muted">—</span>'}</td>
-  <td>${x.issues.length?'<ul class="iss">'+x.issues.sort((a,b)=>b.lvl-a.lvl).map(i=>`<li class="i${i.lvl}">${esc(i.msg)}</li>`).join('')+'</ul>':(x.unverifiable?'<span class="muted">ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ หรือหมุดให้ตรวจ — ถามลูกค้าตอนโทรนัด</span>':'<span class="muted">ไม่พบข้อขัดแย้ง</span>')}</td>
+  <td><div class="av ${/^ไม่ตรง/.test(x.addrVsAmp)?'bad':(/^ตรง/.test(x.addrVsAmp)?'good':'')}">ที่อยู่ลูกค้า vs AUMPHER: <b>${esc(x.addrVsAmp)}</b></div>${x.issues.length?'<ul class="iss">'+x.issues.sort((a,b)=>b.lvl-a.lvl).map(i=>`<li class="i${i.lvl}">${esc(i.msg)}</li>`).join('')+'</ul>':(x.unverifiable?'<span class="muted">ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ หรือหมุดให้ตรวจ — ถามลูกค้าตอนโทรนัด</span>':'<span class="muted">ไม่พบข้อขัดแย้ง</span>')}</td>
   <td>${sug}</td><td>${pin}</td></tr>`;
 }
 function more(){
@@ -621,9 +646,9 @@ function more(){
   $('count').textContent=`แสดง ${shown.toLocaleString()} จาก ${view.length.toLocaleString()} ออเดอร์`;
   $('more').classList.toggle('hidden',shown>=view.length);
 }
-const HEAD=['ระดับ','ORDERID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
+const HEAD=['ระดับ','ที่อยู่ลูกค้า vs AUMPHER','ORDERID','COMPANY_ID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
 const LVNAME=x=>x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
-function rowsOf(list){ return list.map(x=>[LVNAME(x),x.r.ORDERID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,'','','']); }
+function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,'','','']); }
 function copyTSV(){
   const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
   const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
@@ -632,11 +657,12 @@ function copyTSV(){
 function downloadXLSX(){
   try{
     const wb=XLSX.utils.book_new();
-    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,26,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
+    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
     const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
     const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||[0,0,0]; ch[k][0]++; if(x.lvl===3)ch[k][1]++; if(x.lvl===2)ch[k][2]++;});
     const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
-    const sum=[['ไฟล์ต้นทาง',SRCNAME],['ตรวจเมื่อ',new Date().toLocaleString('th-TH')],['ออเดอร์ทั้งหมด',RES.length],[]]
+    const dz=dropOrders();
+    const sum=[['ไฟล์ต้นทาง',SRCNAME],['ตรวจเมื่อ',new Date().toLocaleString('th-TH')],['COMPANY_ID ที่ตรวจ',AddrCheck.COMPANIES.join(', ')],['ออเดอร์ที่ตรวจ',RES.length],['ไม่ได้ตรวจ (COMPANY_ID อื่น)',dz.total]].concat(dz.list.map(([k,v])=>['   '+k,v])).concat([[]])
       .concat(Object.entries(c).map(([k,v])=>[k,v])).concat([[],['ช่องทาง','ออเดอร์','เขตผิด','ควรตรวจ']]).concat(Object.entries(ch).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[k].concat(v)))
       .concat([[],['เขตในระบบ → เขตที่ควรเป็น','จำนวน']]).concat(Object.entries(pr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]));
     const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10}];
