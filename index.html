@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจเขตออเดอร์ Marketplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: header + drop zone, summary row, two side panels (channel, district pairs), then the filterable order table */
+  --bg:#f4f6f8; --surface:#ffffff; --ink:#17212b; --muted:#5b6876; --line:#dde3e9;
+  --accent:#0b6e8a; --accent-ink:#ffffff;
+  --crit:#c2362b; --crit-bg:#fdecea; --warn:#a86400; --warn-bg:#fff3dc; --info:#4a5a6a; --info-bg:#eef2f5; --ok:#23784b; --ok-bg:#e6f4ec;
+  --font-body:"IBM Plex Sans Thai",system-ui,"Noto Sans Thai",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161b; --surface:#192129; --ink:#e7edf2; --muted:#9aa8b5; --line:#2b3540;
+  --accent:#4fb3cf; --accent-ink:#0b1a20;
+  --crit:#ff7b6e; --crit-bg:#3a1d1a; --warn:#f0b35a; --warn-bg:#382a14; --info:#b2c0cc; --info-bg:#222c35; --ok:#6fd39b; --ok-bg:#16301f;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#11161b; --surface:#192129; --ink:#e7edf2; --muted:#9aa8b5; --line:#2b3540;
+  --accent:#4fb3cf; --accent-ink:#0b1a20;
+  --crit:#ff7b6e; --crit-bg:#3a1d1a; --warn:#f0b35a; --warn-bg:#382a14; --info:#b2c0cc; --info-bg:#222c35; --ok:#6fd39b; --ok-bg:#16301f;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1360px;margin:0 auto;padding:20px 20px 60px;display:grid;gap:18px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-size:24px;margin:0;text-wrap:balance;font-weight:700}
+.sub{color:var(--muted);margin:2px 0 0;max-width:70ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--surface);transition:border-color .15s}
+.drop.over{border-color:var(--accent)}
+.drop p{margin:0}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:8px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--info);border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.tile .n{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .l{color:var(--muted);font-size:13px}
+.tile.c3{border-left-color:var(--crit)} .tile.c3 .n{color:var(--crit)}
+.tile.c2{border-left-color:var(--warn)} .tile.c2 .n{color:var(--warn)}
+.tile.c1{border-left-color:var(--info)}
+.tile.c0{border-left-color:var(--ok)} .tile.c0 .n{color:var(--ok)}
+.tile[aria-pressed="true"]{outline:2px solid var(--accent)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+h2{font-size:16px;margin:0 0 10px}
+.mini{width:100%;border-collapse:collapse;font-size:14px}
+.mini th,.mini td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+.mini td.num,.mini th.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--crit);opacity:.8}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.controls input[type=search]{flex:1 1 220px;font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.controls select,.controls input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.controls label{color:var(--muted);font-size:13px;display:flex;gap:6px;align-items:center}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table.main{width:100%;border-collapse:collapse;font-size:14px;min-width:1100px}
+table.main th{position:sticky;top:0;background:var(--surface);text-align:left;font-weight:600;color:var(--muted);font-size:13px;padding:9px 10px;border-bottom:2px solid var(--line)}
+table.main td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.main tr.l3 td:first-child{box-shadow:inset 4px 0 0 var(--crit)}
+table.main tr.l2 td:first-child{box-shadow:inset 4px 0 0 var(--warn)}
+table.main tr.l1 td:first-child{box-shadow:inset 4px 0 0 var(--info)}
+.mono{font-family:var(--font-mono);font-size:12.5px;word-break:break-all}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.p3{background:var(--crit-bg);color:var(--crit)} .p2{background:var(--warn-bg);color:var(--warn)} .p1{background:var(--info-bg);color:var(--info)} .p0{background:var(--ok-bg);color:var(--ok)}
+.iss{margin:0;padding-left:16px} .iss li{margin:2px 0}
+.iss li.i3{color:var(--crit)} .iss li.i2{color:var(--warn)} .iss li.i1{color:var(--muted)}
+.sys b{font-weight:600}
+.sug{color:var(--ok);font-weight:500} .sug b{font-weight:700} .sug small{display:block;font-weight:400;color:var(--muted);margin-top:2px}
+.addr{max-width:380px;color:var(--ink)}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+.legend{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));font-size:14px}
+.legend div{display:flex;gap:8px;align-items:flex-start}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ตรวจเขตออเดอร์ Marketplace</h1>
+      <p class="sub">อัปโหลดไฟล์ report_appointment ประจำวัน ระบบจะเทียบแขวง/เขตที่ช่องทางส่งมา กับที่อยู่ที่ลูกค้าพิมพ์เอง รหัสไปรษณีย์ และหมุดแผนที่ แล้วชี้ออเดอร์ที่เขตน่าจะผิด</p>
+    </div>
+    <div class="controls">
+      <button class="btn ghost hidden" id="copyBtn" type="button">คัดลอกผลไปวาง Excel</button>
+    </div>
+  </header>
+
+  <div class="drop" id="drop">
+    <div>
+      <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
+      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณเท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์</p>
+      <p class="muted" id="refInfo" style="font-size:13px">กำลังโหลดข้อมูลแขวง/เขต …</p>
+    </div>
+    <div class="controls">
+      <label for="tol">ระยะหมุดที่ยอมให้เกินรอยต่อเขต (ม.)<input type="number" id="tol" value="800" min="0" step="100" style="width:90px"></label>
+      <label class="btn" for="file" style="color:var(--accent-ink)">เลือกไฟล์</label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+    </div>
+  </div>
+
+  <section id="intro" class="card">
+    <h2>ระบบตรวจอะไรบ้าง</h2>
+    <div class="legend">
+      <div><span class="pill p3">เขตผิด</span><span>ที่อยู่ที่ลูกค้าพิมพ์ระบุ เขต/อำเภอ หรือแขวงของเขตอื่น, หรือแขวงกับเขตในระบบไม่สัมพันธ์กัน (เช่น แขวงรังสิต + เขตคลองหลวง)</span></div>
+      <div><span class="pill p2">ควรตรวจ</span><span>ข้อความไม่ได้บอกเขต แต่หมุดแผนที่อยู่ในเขตอื่นเกินระยะที่ตั้งไว้, หรือรหัสไปรษณีย์ไม่ตรงกับเขต</span></div>
+      <div><span class="pill p1">ข้อมูลเพิ่ม</span><span>แขวงไม่ตรงแต่ยังเป็นเขตเดียวกัน, หมุดคลาดเคลื่อนแต่ที่อยู่ยืนยันเขตถูก, หมุดใกล้รอยต่อเขต</span></div>
+      <div><span class="pill p0">ปกติ</span><span>ไม่พบข้อขัดแย้งจากข้อมูลที่มี (ออเดอร์ที่ไม่มีทั้งชื่อเขตในข้อความและหมุด จะตรวจได้น้อย)</span></div>
+    </div>
+  </section>
+
+  <section id="results" class="hidden" style="display:grid;gap:18px">
+    <div class="tiles" id="tiles"></div>
+    <div class="two">
+      <div class="card"><h2>แยกตามช่องทาง</h2><div id="byChannel"></div></div>
+      <div class="card"><h2>เขตในระบบ → เขตที่ควรเป็น (พบบ่อย)</h2><div id="byPair"></div></div>
+    </div>
+    <div class="card" style="display:grid;gap:12px">
+      <div class="controls">
+        <input type="search" id="q" placeholder="ค้นหาเลขออเดอร์ ชื่อ เขต แขวง ที่อยู่…" aria-label="ค้นหา">
+        <label for="fLvl">ระดับ
+          <select id="fLvl"><option value="32">เขตผิด + ควรตรวจ</option><option value="3">เขตผิด</option><option value="2">ควรตรวจ</option><option value="1">ข้อมูลเพิ่ม</option><option value="0">ปกติ</option><option value="all">ทั้งหมด</option></select>
+        </label>
+        <label for="fCh">ช่องทาง <select id="fCh"><option value="">ทั้งหมด</option></select></label>
+        <label for="fAmp">เขตในระบบ <select id="fAmp"><option value="">ทั้งหมด</option></select></label>
+      </div>
+      <div class="tablewrap">
+        <table class="main">
+          <thead><tr><th>ระดับ</th><th>ออเดอร์</th><th>ระบบส่งมา</th><th>ที่อยู่ที่ลูกค้าพิมพ์</th><th>สิ่งที่พบ</th><th>ที่ควรแก้เป็น</th><th>หมุด</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager"><span id="count"></span><button class="btn ghost hidden" id="more" type="button">แสดงเพิ่ม</button></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:0">ข้อมูลอ้างอิงแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0), thai-province-data (MIT), ฐานข้อมูล jquery.Thailand.js — ใกล้รอยต่อเขตอาจคลาดเคลื่อนได้เล็กน้อย</p>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>// Loads reference data from pinned public GitHub sources (via jsDelivr, fallback raw.githubusercontent)
+(function (root) {
+  const SRC = {
+    kvSub: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/sub_district.json'],
+    kvDist: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/district.json'],
+    kvProv: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/province.json'],
+    ec: ['earthchie/jquery.Thailand.js', '2f2737e560acc88e6bf1144e8fad3355a72d977d', 'jquery.Thailand.js/database/raw_database/raw_database.json'],
+    geo: ['chingchai/OpenGISData-Thailand', 'fafcea179cda88b689f5697c3866a449e79cd298', 'districts.geojson'],
+  };
+  const urls = ([repo, sha, path]) => [
+    `https://cdn.jsdelivr.net/gh/${repo}@${sha}/${path}`,
+    `https://raw.githubusercontent.com/${repo}/${sha}/${path}`,
+  ];
+  async function getJSON(src, fetchFn) {
+    let err;
+    for (const u of urls(src)) {
+      try { const r = await fetchFn(u); if (r.ok) return await r.json(); err = new Error(r.status + ' ' + u); }
+      catch (e) { err = e; }
+    }
+    throw err;
+  }
+  function build(kvSub, kvDist, kvProv, ec, geo) {
+    const Z = new Map();
+    const put = (t, a, p, z) => { const k = t + '\u0001' + a + '\u0001' + p; if (!Z.has(k)) Z.set(k, new Set()); if (z) Z.get(k).add(String(z)); };
+    ec.forEach(r => put(r.district, r.amphoe, r.province, r.zipcode));
+    const prov = new Map(kvProv.map(p => [p.id, p.name.th]));
+    const dist = new Map(kvDist.filter(d => !d.deleted_at).map(d => [d.id, { a: d.name.th, p: prov.get(d.province_id) }]));
+    kvSub.forEach(s => { if (s.deleted_at) return; const d = dist.get(s.district_id); if (d && d.p) put(s.name.th, d.a, d.p, s.zip_code); });
+    const REF_T = [...Z].map(([k, z]) => { const [t, a, p] = k.split('\u0001'); return [t, a, p, [...z].sort().join(' ')]; });
+    const REF_POLY = geo.features.map(f => {
+      const g = f.geometry, pr = f.properties;
+      return [pr.amp_th, pr.pro_th, g.type === 'Polygon' ? [g.coordinates] : g.coordinates];
+    });
+    return { REF_T, REF_POLY };
+  }
+  async function loadRefs(fetchFn, onProgress) {
+    fetchFn = fetchFn || ((u) => fetch(u));
+    const keys = Object.keys(SRC); let done = 0;
+    const got = await Promise.all(keys.map(k => getJSON(SRC[k], fetchFn).then(v => { done++; onProgress && onProgress(done, keys.length); return v; })));
+    const o = Object.fromEntries(keys.map((k, i) => [k, got[i]]));
+    return build(o.kvSub, o.kvDist, o.kvProv, o.ec, o.geo);
+  }
+  root.RefLoader = { loadRefs, build, SRC };
+  if (typeof module !== 'undefined') module.exports = root.RefLoader;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Address/district checker — shared by the web page and node tests.
+// REF_T: [[tambon, amphoe, province, "zip zip"], ...]
+// REF_POLY: [[amphoe, province, [polygon[ring[[lng,lat],...]]]], ...]
+(function (root) {
+  const BKK = 'กรุงเทพมหานคร';
+  const norm = s => (s == null ? '' : String(s))
+    .replace(/เเ/g, 'แ').replace(/ํา/g, 'ำ').replace(/​/g, '')
+    .replace(/[\s ]+/g, ' ').trim();
+  const key = s => norm(s).replace(/\s/g, '');
+  const PROV_ALIAS = { 'กรุงเทพ': BKK, 'กทม': BKK, 'กทม.': BKK, 'กรุงเทพฯ': BKK, 'กรุงเทพมหานครฯ': BKK };
+
+  function buildIndex(REF_T, REF_POLY) {
+    const ix = {
+      triple: new Map(), tamb: new Map(), amp: new Map(), ampZips: new Map(),
+      zipAmp: new Map(), prov: new Set(), poly: new Map(), polys: [],
+    };
+    for (const [t, a, p, z] of REF_T) {
+      const zips = z ? z.split(' ') : [];
+      const tk = key(t), ak = key(a), pk = key(p);
+      ix.triple.set(tk + '|' + ak + '|' + pk, zips);
+      if (!ix.tamb.has(tk)) ix.tamb.set(tk, []);
+      ix.tamb.get(tk).push({ t, a, p, zips });
+      if (!ix.amp.has(ak)) ix.amp.set(ak, new Set());
+      ix.amp.get(ak).add(p);
+      const apk = ak + '|' + pk;
+      if (!ix.ampZips.has(apk)) ix.ampZips.set(apk, new Set());
+      zips.forEach(zz => {
+        ix.ampZips.get(apk).add(zz);
+        if (!ix.zipAmp.has(zz)) ix.zipAmp.set(zz, new Map());
+        ix.zipAmp.get(zz).set(apk, { a, p });
+      });
+      ix.prov.add(p);
+    }
+    ix.tambNames = [...ix.tamb.keys()].filter(n => n.length >= 2).sort((x, y) => y.length - x.length);
+    ix.ampNames = [...ix.amp.keys()].sort((x, y) => y.length - x.length);
+    ix.provNames = [...ix.prov].map(key).concat(Object.keys(PROV_ALIAS)).sort((x, y) => y.length - x.length);
+    for (const [a, p, polys] of REF_POLY) {
+      const bbox = [180, 90, -180, -90];
+      polys.forEach(poly => poly[0].forEach(([x, y]) => {
+        if (x < bbox[0]) bbox[0] = x; if (y < bbox[1]) bbox[1] = y;
+        if (x > bbox[2]) bbox[2] = x; if (y > bbox[3]) bbox[3] = y;
+      }));
+      const rec = { a, p, polys, bbox };
+      ix.poly.set(key(a) + '|' + key(p), rec);
+      ix.polys.push(rec);
+    }
+    return ix;
+  }
+
+  // ---------- geometry ----------
+  function inRing(x, y, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function inRec(x, y, rec) {
+    const b = rec.bbox;
+    if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) return false;
+    return rec.polys.some(poly => inRing(x, y, poly[0]) && !poly.slice(1).some(h => inRing(x, y, h)));
+  }
+  function distToRecM(x, y, rec) { // approx metres to boundary
+    const kx = 111320 * Math.cos(y * Math.PI / 180), ky = 110540;
+    let best = Infinity;
+    rec.polys.forEach(poly => poly.forEach(ring => {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const ax = (ring[j][0] - x) * kx, ay = (ring[j][1] - y) * ky;
+        const bx = (ring[i][0] - x) * kx, by = (ring[i][1] - y) * ky;
+        const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+        let t = L ? -(ax * dx + ay * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+        const px = ax + t * dx, py = ay + t * dy, d = Math.sqrt(px * px + py * py);
+        if (d < best) best = d;
+      }
+    }));
+    return best;
+  }
+
+  // ---------- text extraction ----------
+  const RX_T = /(แขวง|ตำบล|ต\.)\s*/g;
+  const RX_A = /(เขต|อำเภอ|อ\.)\s*/g;
+  const RX_P = /(จังหวัด|จ\.)\s*/g;
+  function matchAt(text, pos, names) {
+    const rest = text.slice(pos).replace(/\s/g, '');
+    for (const n of names) if (rest.startsWith(n)) return n;
+    return null;
+  }
+  function findPrefixed(text, rx, names) {
+    const out = []; rx.lastIndex = 0; let m;
+    while ((m = rx.exec(text))) {
+      const n = matchAt(text, m.index + m[0].length, names);
+      if (n) out.push({ name: n, raw: m[0] + n });
+    }
+    return out;
+  }
+  function custPart(addr, t, a, p) {
+    let s = norm(addr);
+    const sfx = [norm(a), norm(p)].join(' ');
+    if (a && s.endsWith(sfx)) {
+      s = s.slice(0, -sfx.length).trim();
+      if (t && s.endsWith(norm(t))) s = s.slice(0, -norm(t).length).trim();
+    }
+    return s;
+  }
+
+  // ---------- main ----------
+  function checkOrder(o, ix, opt) {
+    opt = Object.assign({ pinToleranceM: 800 }, opt || {});
+    const T = key(o.TUMBOL), A = key(o.AUMPHER), P = key(o.PROVICE), Z = String(o.ZIPCODE || '').trim();
+    const issues = []; // {lvl:3|2|1, code, msg}
+    const add = (lvl, code, msg) => issues.push({ lvl, code, msg });
+    const evid = []; // amphoe suggestions {a,p,src}
+    const sysAP = A + '|' + P;
+    const ampZips = ix.ampZips.get(sysAP);
+
+    // 1) system fields consistency with master
+    if (!ix.amp.has(A) || !ix.amp.get(A).has(o.PROVICE)) {
+      add(3, 'SYS_AMP', `เขต "${o.AUMPHER}" ไม่มีอยู่ใน จ.${o.PROVICE}`);
+    }
+    if (!T) add(1, 'SYS_T_BLANK', 'ไม่มีแขวง/ตำบลในระบบ');
+    else if (!ix.triple.has(T + '|' + A + '|' + P)) {
+      const elsewhere = (ix.tamb.get(T) || []).filter(r => key(r.p) === P);
+      if (elsewhere.length) {
+        add(3, 'SYS_T_A', `แขวง "${o.TUMBOL}" ไม่ได้อยู่ในเขต ${o.AUMPHER} (อยู่ในเขต ${[...new Set(elsewhere.map(r => r.a))].join('/')})`);
+        elsewhere.forEach(r => evid.push({ a: r.a, p: r.p, src: 'แขวงในระบบ' }));
+      } else add(1, 'SYS_T', `ไม่พบแขวง "${o.TUMBOL}" ในฐานข้อมูล`);
+    }
+    if (Z && ampZips && ampZips.size && !ampZips.has(Z) && ix.zipAmp.has(Z)) {
+      const others = ix.zipAmp.get(Z);
+      add(2, 'SYS_ZIP', `รหัสไปรษณีย์ ${Z} ไม่อยู่ในเขต ${o.AUMPHER}` + (others ? ` (เป็นของ ${[...others.values()].map(v => v.a).join('/')})` : ''));
+      if (others && others.size === 1) others.forEach(v => evid.push({ a: v.a, p: v.p, src: 'รหัสไปรษณีย์ระบบ' }));
+    }
+
+    // 2) customer free text vs system
+    const cust = custPart(o.ADDRESS, o.TUMBOL, o.AUMPHER, o.PROVICE);
+    const statedP = [...new Set(findPrefixed(cust, RX_P, ix.provNames).map(x => PROV_ALIAS[x.name] ? key(PROV_ALIAS[x.name]) : x.name))];
+    const ctxP = statedP.length === 1 ? statedP[0] : P;
+    if (statedP.length && !statedP.includes(P)) add(3, 'TXT_PROV', `ลูกค้าระบุ จ.${statedP.join('/')} แต่ระบบเป็น ${o.PROVICE}`);
+
+    let statedA = findPrefixed(cust, RX_A, ix.ampNames.concat(['เมือง'])).map(x => x.name);
+    statedA = statedA.map(n => n === 'เมือง' ? 'เมือง' + ctxP : n).filter(n => ix.amp.has(n));
+    // prefer amphoe that exists in the context province
+    statedA = [...new Set(statedA)].filter(n => [...ix.amp.get(n)].some(p => key(p) === ctxP || key(p) === P));
+    if (statedA.length && !statedA.includes(A)) {
+      add(3, 'TXT_AMP', `ลูกค้าเขียน "เขต/อ.${statedA.join(', ')}" แต่ระบบเป็นเขต ${o.AUMPHER}`);
+      statedA.forEach(a => evid.push({ a, p: [...ix.amp.get(a)].find(p => key(p) === ctxP) || o.PROVICE, src: 'ที่อยู่ลูกค้า' }));
+    }
+
+    const statedT = [...new Set(findPrefixed(cust, RX_T, ix.tambNames).map(x => x.name))]
+      .filter(n => (ix.tamb.get(n) || []).some(r => key(r.p) === ctxP || key(r.p) === P));
+    if (statedT.length && T && !statedT.includes(T)) {
+      for (const n of statedT) {
+        const recs = ix.tamb.get(n).filter(r => key(r.p) === ctxP || key(r.p) === P);
+        if (recs.some(r => key(r.a) === A)) add(1, 'TXT_TAMB', `ลูกค้าเขียน "แขวง/ต.${n}" แต่ระบบเป็น ${o.TUMBOL} (เขตเดียวกัน)`);
+        else if (!statedA.length || statedA.every(sa => recs.some(r => key(r.a) === sa))) {
+          add(3, 'TXT_TAMB_A', `ลูกค้าเขียน "แขวง/ต.${n}" ซึ่งอยู่ในเขต ${[...new Set(recs.map(r => r.a))].join('/')} ไม่ใช่เขต ${o.AUMPHER}`);
+          recs.forEach(r => evid.push({ a: r.a, p: r.p, src: 'แขวงที่ลูกค้าเขียน' }));
+        }
+      }
+    }
+
+    const zipsTxt = [...new Set((cust.match(/(?<!\d)[1-9]\d{4}(?!\d)/g) || []).filter(z => ix.zipAmp.has(z)))];
+    if (zipsTxt.length && ampZips && ampZips.size && !zipsTxt.some(z => ampZips.has(z))) {
+      const amps = new Map(); zipsTxt.forEach(z => ix.zipAmp.get(z).forEach((v, k) => amps.set(k, v)));
+      add(statedA.length && statedA.includes(A) ? 1 : 2, 'TXT_ZIP', `ลูกค้าเขียนรหัสไปรษณีย์ ${zipsTxt.join(',')} ซึ่งไม่ใช่ของเขต ${o.AUMPHER} (เป็นของ ${[...amps.values()].map(v => v.a).join('/')})`);
+      if (amps.size === 1) amps.forEach(v => { if (key(v.p) === ctxP) evid.push({ a: v.a, p: v.p, src: 'รหัสไปรษณีย์ที่ลูกค้าเขียน' }); });
+    }
+
+    // 3) map pin vs system amphoe
+    let pin = null;
+    const ll = String(o.LatLng || '').split(',').map(Number);
+    if (ll.length === 2 && isFinite(ll[0]) && isFinite(ll[1]) && ll[0] > 5 && ll[0] < 21 && ll[1] > 97 && ll[1] < 106) {
+      const [lat, lng] = ll; const sysRec = ix.poly.get(sysAP);
+      pin = { lat, lng, amp: null, dist: 0 };
+      if (sysRec && inRec(lng, lat, sysRec)) pin.amp = sysRec.a;
+      else {
+        const hit = ix.polys.find(r => inRec(lng, lat, r));
+        pin.amp = hit ? hit.a : null; pin.prov = hit ? hit.p : null;
+        pin.dist = sysRec ? Math.round(distToRecM(lng, lat, sysRec)) : null;
+        if (sysRec) {
+          const where = hit ? `เขต ${hit.a}${key(hit.p) !== P ? ' จ.' + hit.p : ''}` : 'นอกเขตที่รู้จัก';
+          const km = (pin.dist / 1000).toFixed(1);
+          const textOther = issues.some(i => i.code === 'TXT_AMP' || i.code === 'TXT_TAMB_A' || i.code === 'TXT_PROV');
+          const confirmsP = !textOther && (statedA.includes(A) || (A.length >= 3 && cust.replace(/\s/g, '').includes(A)));
+          if (pin.dist > opt.pinToleranceM) {
+            if (confirmsP) add(1, 'PIN_VS_TEXT', `หมุดอยู่ใน${where} (~${km} กม.) แต่ที่อยู่ลูกค้าระบุเขต ${o.AUMPHER} ตรงกับระบบ — หมุดน่าจะคลาดเคลื่อน`);
+            else {
+              add(textOther ? 3 : 2, 'PIN', `หมุดแผนที่อยู่ใน${where} ห่างจากเขต ${o.AUMPHER} ~${km} กม.`);
+              if (hit) evid.push({ a: hit.a, p: hit.p, src: 'หมุดแผนที่' });
+            }
+          } else add(1, 'PIN_EDGE', `หมุดอยู่${where} ใกล้รอยต่อเขต ${o.AUMPHER} (~${pin.dist} ม.)`);
+        }
+      }
+    }
+
+    // confirmation: customer text supports the system amphoe
+    const textOther = issues.some(i => i.code === 'TXT_AMP' || i.code === 'TXT_TAMB_A' || i.code === 'TXT_PROV');
+    const confirms = !textOther && (statedA.includes(A) || (A.length >= 3 && cust.replace(/\s/g, '').includes(A)));
+    if (confirms) issues.forEach(i => { if (i.code === 'SYS_ZIP' || i.code === 'TXT_ZIP') i.lvl = 1; });
+
+    // suggestion: amphoe by evidence votes, then tambon + zip inside that amphoe
+    const votes = new Map();
+    evid.forEach(e => { const k = e.a + '|' + e.p; if (!votes.has(k)) votes.set(k, { a: e.a, p: e.p, src: new Set() }); votes.get(k).src.add(e.src); });
+    const best = [...votes.values()].filter(v => !(key(v.a) === A && key(v.p) === P)).sort((x, y) => y.src.size - x.src.size)[0] || null;
+    const sa = best ? best.a : o.AUMPHER, sp = best ? best.p : o.PROVICE;
+    const inAmp = n => (ix.tamb.get(n) || []).find(r => key(r.a) === key(sa) && key(r.p) === key(sp));
+    let st = null, src = best ? [...best.src] : [];
+    const tStated = statedT.map(inAmp).find(Boolean);
+    if (tStated) { st = tStated; if (!best && key(st.t) !== T) src = ['แขวงที่ลูกค้าเขียน']; }
+    else if (T && inAmp(T)) st = inAmp(T);
+    let sz = null;
+    if (st && st.zips.length) sz = (zipsTxt.find(z => st.zips.includes(z))) || (st.zips.includes(Z) ? Z : st.zips[0]);
+    else { const az = ix.ampZips.get(key(sa) + '|' + key(sp)); if (az) sz = zipsTxt.find(z => az.has(z)) || (az.has(Z) ? Z : (az.size === 1 ? [...az][0] : null)); }
+    const changed = best || (st && key(st.t) !== T) || (sz && sz !== Z && issues.some(i => i.code === 'SYS_ZIP'));
+    const suggest = changed ? { a: sa, p: sp, t: st ? st.t : null, zip: sz, src, ampChanged: !!best } : null;
+    const lvl = issues.reduce((m, i) => Math.max(m, i.lvl), 0);
+    return { lvl, issues, cust, pin, suggest };
+  }
+
+  root.AddrCheck = { buildIndex, checkOrder, norm, key };
+  if (typeof module !== 'undefined') module.exports = root.AddrCheck;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const LV={3:'เขตผิด',2:'ควรตรวจ',1:'ข้อมูลเพิ่ม',0:'ปกติ'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
+const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textContent=`กำลังโหลดข้อมูลแขวง/เขต ${d}/${n} …`; })
+  .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
+  .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
+function ix(){ return IX; }
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+function readFile(f){
+  $('fileInfo').textContent='กำลังอ่าน '+f.name+' …';
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      RAW=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!RAW.length||!('AUMPHER' in RAW[0])||!('ADDRESS' in RAW[0])) throw new Error('ไม่พบคอลัมน์ ADDRESS / AUMPHER ในชีตแรก');
+      $('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'+(IX?'':' · รอข้อมูลแขวง/เขต…');
+      REFS_READY.then(()=>{$('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'; run();});
+    }catch(err){$('fileInfo').textContent='อ่านไฟล์ไม่ได้: '+err.message+' — ตรวจว่าเป็นไฟล์ report_appointment แบบ .xlsx';}
+  };
+  r.readAsArrayBuffer(f);
+}
+function run(){
+  const tol=+$('tol').value||0, I=ix(), byId=new Map();
+  RAW.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
+  RES=[...byId.values()].map(({r,lines,total})=>Object.assign({r,lines,total},AddrCheck.checkOrder(r,I,{pinToleranceM:tol})));
+  RES.sort((a,b)=>b.lvl-a.lvl);
+  $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden');
+  const chs=[...new Set(RES.map(x=>x.r.CHANNEL))].sort(); $('fCh').innerHTML='<option value="">ทั้งหมด</option>'+chs.map(c=>`<option>${esc(c)}</option>`).join('');
+  const amps=[...new Set(RES.map(x=>x.r.AUMPHER))].sort((a,b)=>a.localeCompare(b,'th')); $('fAmp').innerHTML='<option value="">ทั้งหมด</option>'+amps.map(c=>`<option>${esc(c)}</option>`).join('');
+  summary(); filter();
+}
+function summary(){
+  const c={3:0,2:0,1:0,0:0}; RES.forEach(x=>c[x.lvl]++);
+  const t=[['all',RES.length,'ออเดอร์ทั้งหมด',''],['3',c[3],'เขตผิด (มีหลักฐานจากที่อยู่)','c3'],['2',c[2],'ควรตรวจ (หมุด/รหัสไปรษณีย์)','c2'],['1',c[1],'ข้อมูลเพิ่ม','c1'],['0',c[0],'ปกติ','c0']];
+  $('tiles').innerHTML=t.map(([k,n,l,cl])=>`<button type="button" class="tile ${cl}" data-l="${k}" aria-pressed="false"><div class="n">${n.toLocaleString()}</div><div class="l">${l}</div></button>`).join('');
+  $('tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{$('fLvl').value=b.dataset.l;filter();});
+  // channel table
+  const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; ch[k]=ch[k]||{n:0,3:0,2:0}; ch[k].n++; if(x.lvl>=2) ch[k][x.lvl]++;});
+  $('byChannel').innerHTML='<table class="mini"><thead><tr><th>ช่องทาง</th><th class="num">ออเดอร์</th><th class="num">เขตผิด</th><th class="num">ควรตรวจ</th><th class="num">% เขตผิด</th></tr></thead><tbody>'+
+    Object.entries(ch).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${v.n.toLocaleString()}</td><td class="num">${v[3]}</td><td class="num">${v[2]}</td><td class="num">${(v[3]/v.n*100).toFixed(1)}%</td></tr>`).join('')+'</tbody></table>';
+  // pair table
+  const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
+  const top=Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,10), mx=top.length?top[0][1]:1;
+  $('byPair').innerHTML=top.length?'<table class="mini"><tbody>'+top.map(([k,n])=>`<tr><td style="width:55%">${esc(k)}</td><td><div class="bar" style="width:${Math.max(4,n/mx*100)}%"></div></td><td class="num">${n}</td></tr>`).join('')+'</tbody></table><p class="muted" style="font-size:13px;margin:8px 0 0">ถ้าคู่เดิมโผล่ซ้ำทุกวัน มักเป็นการแมปรหัสไปรษณีย์เป็นเขตเดียวของช่องทาง ควรแจ้งแก้ที่ต้นทาง</p>':'<p class="muted">ไม่พบ</p>';
+}
+function filter(){
+  lvlFilter=$('fLvl').value; const q=$('q').value.trim().toLowerCase(), ch=$('fCh').value, amp=$('fAmp').value;
+  view=RES.filter(x=>{
+    if(lvlFilter==='32'){if(x.lvl<2) return false;} else if(lvlFilter!=='all' && x.lvl!==+lvlFilter) return false;
+    if(ch && x.r.CHANNEL!==ch) return false; if(amp && x.r.AUMPHER!==amp) return false;
+    if(q){const s=[x.r.ORDERID,x.r.CUSTOMER_NAME,x.r.TEL,x.r.ADDRESS,x.r.TUMBOL,x.r.AUMPHER,x.suggest&&x.suggest.a].join(' ').toLowerCase(); if(!s.includes(q)) return false;}
+    return true;});
+  document.querySelectorAll('.tile').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.l===lvlFilter)));
+  shown=0; $('tbody').innerHTML=''; more();
+}
+function row(x){
+  const r=x.r, p=x.pin;
+  const pin=p?`<a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" rel="noopener">เปิดแผนที่</a><div class="muted" style="font-size:12px">${p.amp?esc(p.amp):'—'}</div>`:'<span class="muted">ไม่มีหมุด</span>';
+  const g=x.suggest;
+  const conf=g?(g.src.length>=2?'มั่นใจสูง':'มั่นใจปานกลาง'):'';
+  const sug=g?`<div class="sug">${g.t?'แขวง '+esc(g.t)+'<br>':''}${g.ampChanged?'<b>เขต '+esc(g.a)+'</b>':'เขต '+esc(g.a)}${g.p!==r.PROVICE?' จ.'+esc(g.p):''}${g.zip?'<br>'+esc(g.zip):''}<small>${conf} · จาก ${g.src.map(esc).join(', ')}</small></div>`:'<span class="muted">—</span>';
+  return `<tr class="l${x.lvl}"><td><span class="pill p${x.lvl}">${LV[x.lvl]}</span></td>
+  <td><div class="mono">${esc(r.ORDERID)}</div><div class="muted" style="font-size:13px">${esc(r.CHANNEL)} · ${esc(r.CUSTOMER_NAME)}</div></td>
+  <td class="sys">แขวง <b>${esc(r.TUMBOL)||'—'}</b><br>เขต <b>${esc(r.AUMPHER)}</b><br><span class="muted">${esc(r.PROVICE)} ${esc(r.ZIPCODE)}</span></td>
+  <td class="addr">${esc(x.cust)||'<span class="muted">—</span>'}</td>
+  <td>${x.issues.length?'<ul class="iss">'+x.issues.sort((a,b)=>b.lvl-a.lvl).map(i=>`<li class="i${i.lvl}">${esc(i.msg)}</li>`).join('')+'</ul>':'<span class="muted">ไม่พบข้อขัดแย้ง</span>'}</td>
+  <td>${sug}</td><td>${pin}</td></tr>`;
+}
+function more(){
+  const chunk=view.slice(shown,shown+PAGE); $('tbody').insertAdjacentHTML('beforeend',chunk.map(row).join('')); shown+=chunk.length;
+  $('count').textContent=`แสดง ${shown.toLocaleString()} จาก ${view.length.toLocaleString()} ออเดอร์`;
+  $('more').classList.toggle('hidden',shown>=view.length);
+}
+function copyTSV(){
+  const h=['ระดับ','ORDERID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng'];
+  const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
+  const lines=[h.join('\t')].concat(view.map(x=>[LV[x.lvl],x.r.ORDERID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng].map(cl).join('\t')));
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>toast(`คัดลอก ${view.length} ออเดอร์แล้ว วางใน Excel ได้เลย`),()=>toast('คัดลอกไม่ได้ ลองใหม่อีกครั้ง'));
+}
+$('file').onchange=e=>{if(e.target.files[0]) readFile(e.target.files[0]);};
+const d=$('drop');
+['dragenter','dragover'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('over');}));
+d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) readFile(f);});
+$('tol').onchange=()=>{if(RAW) run();};
+['q'].forEach(id=>$(id).addEventListener('input',filter));
+['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
+$('more').onclick=more; $('copyBtn').onclick=copyTSV;
+})();
+</script>
+</body>
+</html>
