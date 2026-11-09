@@ -123,7 +123,7 @@ a{color:var(--accent)}
   <div class="drop" id="drop">
     <div>
       <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
-      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณเท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์</p>
+      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณเท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์ (ระบบบันทึกแค่วันเวลาที่ใช้และจำนวนที่ตรวจ ไม่มีข้อมูลลูกค้า)</p>
       <p class="muted" id="refInfo" style="font-size:13px">กำลังโหลดข้อมูลแขวง/เขต …</p>
     </div>
     <div class="controls">
@@ -244,7 +244,7 @@ a{color:var(--accent)}
         <li>หมุดคือจุดปิดงานครั้งก่อน ลูกค้าที่ย้ายบ้านหรือลูกค้าใหม่ หมุดจะไม่ช่วย</li>
         <li>ชื่อพื้นที่ที่ไม่มีคำนำหน้าจะไม่ถูกอ่าน ยกเว้นแบบ "ไทย/ English" ของ Lazada</li>
         <li>ข้อมูลแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ มาจาก thai-province-data, jquery.Thailand.js และ OpenGISData-Thailand ใกล้รอยต่อเขตอาจคลาดได้เล็กน้อย</li>
-        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์</li>
+        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์ ระบบบันทึกการใช้งานแค่วันเวลา การกระทำ (เปิดหน้า ตรวจไฟล์ ดาวน์โหลด คัดลอก) ชื่อไฟล์ และจำนวนออเดอร์แต่ละสถานะ ไม่มีที่อยู่หรือข้อมูลลูกค้า</li>
       </ul>
     </div>
   </section>
@@ -666,6 +666,9 @@ const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textCont
   .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
   .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
 function ix(){ return IX; }
+const LOG_URL='https://script.google.com/macros/s/AKfycbyQUjYB5obPZiNzasvc2IC71sra07ETW5h_PtVPu_RkTJFSCaYxM-V5I9EUknikd0IJNQ/exec';
+function logUse(a,extra){ try{ if(!LOG_URL||LOG_URL.indexOf('__')===0||!/^https?:$/.test(location.protocol)||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return; fetch(LOG_URL,{method:'POST',mode:'no-cors',keepalive:true,body:JSON.stringify(Object.assign({a},extra||{}))}).catch(()=>{}); }catch(e){} }
+function logCheck(){ const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; }); logUse('ตรวจไฟล์',{f:SRCNAME,o:RES.length,x:dropOrders().total,c3:c[3],c2:c[2],na:c.na,c1:c[1],c0:c[0]}); }
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 
 function readFile(f){
@@ -681,7 +684,7 @@ function readFile(f){
       if(miss.length) throw new Error('ไม่พบคอลัมน์ '+miss.join(', ')+' ในชีตแรก (ไฟล์ต้นทางอาจเปลี่ยนรูปแบบ)');
       if(missOpt.length) toast('ไม่พบคอลัมน์ '+missOpt.join(', ')+' — ตรวจได้น้อยลง');
       $('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'+(IX?'':' · รอข้อมูลแขวง/เขต…');
-      REFS_READY.then(()=>{$('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'; run();});
+      REFS_READY.then(()=>{$('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'; run(); logCheck();});
     }catch(err){$('fileInfo').textContent='อ่านไฟล์ไม่ได้: '+err.message+' — ตรวจว่าเป็นไฟล์ report_appointment แบบ .xlsx';}
   };
   r.readAsArrayBuffer(f);
@@ -755,7 +758,7 @@ function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r
 function copyTSV(){
   const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
   const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
-  navigator.clipboard.writeText(lines.join('\n')).then(()=>toast(`คัดลอก ${view.length} ออเดอร์แล้ว วางใน Excel ได้เลย`),()=>toast('คัดลอกไม่ได้ ลองใหม่อีกครั้ง'));
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>(logUse('คัดลอก'),toast(`คัดลอก ${view.length} ออเดอร์แล้ว วางใน Excel ได้เลย`)),()=>toast('คัดลอกไม่ได้ ลองใหม่อีกครั้ง'));
 }
 function downloadXLSX(){
   try{
@@ -775,7 +778,7 @@ function downloadXLSX(){
     XLSX.utils.book_append_sheet(wb,mk(RES),'ทั้งหมด');
     const m=String(SRCNAME).match(/(20\d{6})/); const d=m?m[1]:new Date().toISOString().slice(0,10).replace(/-/g,'');
     XLSX.writeFile(wb,`ผลตรวจเขต_${d}.xlsx`);
-    toast('กำลังดาวน์โหลดไฟล์ Excel');
+    toast('กำลังดาวน์โหลดไฟล์ Excel'); logUse('ดาวน์โหลด Excel');
   }catch(e){ toast('ดาวน์โหลดไม่ได้ในหน้านี้ ใช้ปุ่มคัดลอกแทน'); }
 }
 $('file').onchange=e=>{if(e.target.files[0]) readFile(e.target.files[0]);};
@@ -787,7 +790,7 @@ $('tol').onchange=()=>{if(RAW) run();};
 ['q'].forEach(id=>$(id).addEventListener('input',filter));
 ['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
 function route(){ const how=location.hash==='#how'; $('pageCheck').classList.toggle('hidden',how); $('pageHow').classList.toggle('hidden',!how); $('tabHow').classList.toggle('on',how); $('tabCheck').classList.toggle('on',!how); $('copyBtn').style.visibility=$('xlsxBtn').style.visibility=how?'hidden':''; }
-window.addEventListener('hashchange',route); route();
+window.addEventListener('hashchange',route); route(); logUse('เปิดหน้าเว็บ');
 $('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX;
 })();
 </script>
