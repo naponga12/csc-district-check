@@ -85,6 +85,23 @@ a{color:var(--accent)}
 .toast.show{opacity:1}
 .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;color:var(--muted);font-size:13px}
 .hidden{display:none!important}
+.tabs{display:flex;gap:4px;margin-top:10px;border-bottom:1px solid var(--line)}
+.tabs a{padding:6px 14px;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.how{max-width:980px} .hh{font-size:18px;margin:0 0 10px} .lead{margin:0;font-size:16px;line-height:1.8}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps li{display:grid;grid-template-columns:36px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.steps li.main{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.steps h3{margin:0 0 4px;font-size:15px} .steps p{margin:0 0 6px}
+.sn{width:30px;height:30px;font-size:13px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700}
+.ex{font-size:13px;background:var(--bg);border-radius:8px;padding:8px 10px;line-height:1.7} .ex s{color:var(--crit)}
+.exl{display:inline-block;min-width:92px;color:var(--muted);font-size:12px}
+.rule td,.rule th{vertical-align:top} .rule b.g{color:var(--ok)} .rule b.r{color:var(--crit)}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.exgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.exc{border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px} .exc p{margin:4px 0} .exh{margin-bottom:6px}
+.why{color:var(--muted);font-size:13px;border-top:1px dashed var(--line);padding-top:6px;margin-top:8px!important}
+.plain{margin:0;padding-left:20px;display:grid;gap:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -93,6 +110,7 @@ a{color:var(--accent)}
   <header>
     <div>
       <h1>ตรวจเขตออเดอร์ Marketplace</h1>
+      <nav class="tabs" aria-label="หน้า"><a href="#check" id="tabCheck" class="on">ตรวจไฟล์</a><a href="#how" id="tabHow">ระบบทำงานอย่างไร</a></nav>
       <p class="sub">อัปโหลดไฟล์ report_appointment ประจำวัน ระบบจะเทียบแขวง/เขตที่ช่องทางส่งมา กับที่อยู่ที่ลูกค้าพิมพ์เอง รหัสไปรษณีย์ และหมุดแผนที่ แล้วชี้ออเดอร์ที่เขตน่าจะผิด</p>
     </div>
     <div class="controls">
@@ -101,6 +119,7 @@ a{color:var(--accent)}
     </div>
   </header>
 
+  <div id="pageCheck" style="display:grid;gap:18px">
   <div class="drop" id="drop">
     <div>
       <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
@@ -150,7 +169,84 @@ a{color:var(--accent)}
       </div>
       <div class="pager"><span id="count"></span><button class="btn ghost hidden" id="more" type="button">แสดงเพิ่ม</button></div>
     </div>
-    <p class="muted" style="font-size:13px;margin:0">ข้อมูลอ้างอิงแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0), thai-province-data (MIT), ฐานข้อมูล jquery.Thailand.js — ใกล้รอยต่อเขตอาจคลาดเคลื่อนได้เล็กน้อย</p>
+    <p class="muted" style="font-size:13px;margin:0" id="refNote">ข้อมูลอ้างอิงแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0), thai-province-data (MIT), ฐานข้อมูล jquery.Thailand.js — ใกล้รอยต่อเขตอาจคลาดเคลื่อนได้เล็กน้อย</p>
+  </section>
+  </div>
+  <section id="pageHow" class="hidden" style="display:grid;gap:18px">
+    <div class="card how">
+      <h2 class="hh">สรุปในหนึ่งประโยค</h2>
+      <p class="lead">ระบบอ่าน <b>ที่อยู่ที่ลูกค้าพิมพ์เอง</b> แล้วดูว่าเขตในนั้นตรงกับเขตที่ช่องทางส่งมาในช่อง <b>AUMPHER</b> ไหม ถ้าไม่ตรงคือ <span class="pill p3">เขตผิด</span> ถ้าลูกค้าไม่ได้เขียนเขต ระบบจะใช้หลักฐานเสริมช่วยดู และจะขึ้นได้สูงสุดแค่ <span class="pill p2">ควรตรวจ</span></p>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ขั้นตอนการตรวจ ทีละขั้น</h2>
+      <ol class="steps">
+        <li><div class="sn">0a</div><div><h3>กรองออเดอร์</h3><p>ตรวจเฉพาะ <b>COMPANY_ID 1247 และ 1230</b> รหัสอื่นจะไม่ถูกตรวจ แต่หน้าสรุปบอกจำนวนที่ตัดออก ออเดอร์ที่มีหลายบรรทัด (หลายสินค้า) จะนับเป็น 1 ออเดอร์</p></div></li>
+        <li><div class="sn">0b</div><div><h3>แยกที่อยู่ที่ลูกค้าพิมพ์เอง</h3><p>ช่อง ADDRESS มีชื่อแขวง เขต จังหวัดที่ระบบต่อท้ายไว้ ระบบตัดส่วนนั้นออกก่อน เพื่อให้เหลือเฉพาะสิ่งที่ลูกค้าพิมพ์จริง</p>
+          <div class="ex"><span class="exl">ADDRESS</span> 12/3 ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง กรุงเทพฯ 10310 <s>ห้วยขวาง ห้วยขวาง กรุงเทพมหานคร</s><br><span class="exl">ที่ลูกค้าพิมพ์</span> 12/3 ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง กรุงเทพฯ 10310</div></div></li>
+        <li class="main"><div class="sn">1</div><div><h3>ขั้นหลัก: ที่อยู่ลูกค้า เทียบกับ AUMPHER</h3><p>ระบบหาคำที่บอกพื้นที่ในที่อยู่ แล้วเทียบกับช่อง AUMPHER ผลมี 5 แบบ ซึ่งแสดงเป็นบรรทัดแรกของช่อง "สิ่งที่พบ"</p>
+          <table class="mini rule"><thead><tr><th>ผลเทียบ</th><th>หมายถึง</th><th>สถานะ</th></tr></thead><tbody>
+            <tr><td><b class="g">ตรง</b></td><td>ลูกค้าเขียนเขตเดียวกับ AUMPHER หรือเขียนแค่แขวงที่อยู่ในเขต AUMPHER</td><td><span class="pill p0">ปกติ</span> จบเลย</td></tr>
+            <tr><td><b class="r">ไม่ตรง</b></td><td>ลูกค้าเขียนเขต แขวง หรือจังหวัด ที่เป็นของที่อื่น</td><td><span class="pill p3">เขตผิด</span></td></tr>
+            <tr><td><b>ระบุหลายเขต</b></td><td>ในที่อยู่มีหลายเขต เช่น ที่อยู่บ้านกับที่ทำงาน</td><td><span class="pill p2">ควรตรวจ</span></td></tr>
+            <tr><td><b>ไม่ชัด</b></td><td>ชื่อแขวงที่เขียนมีอยู่หลายเขต เช่น แขวงบางมด (จอมทอง/ทุ่งครุ)</td><td><span class="pill p2">ควรตรวจ</span></td></tr>
+            <tr><td><b>ไม่ได้ระบุ</b></td><td>ลูกค้าไม่ได้เขียนเขตหรือแขวงเลย</td><td>ไปดูขั้น 2–4</td></tr>
+          </tbody></table>
+          <p class="note">ระบบอ่านได้ทั้งแบบไทย (แขวง ตำบล ต. เขต อำเภอ อ. จังหวัด จ.) ภาษาอังกฤษ (Khet, Khwaeng, District, Subdistrict) แบบ Lazada "ราชเทวี/ Ratchathewi" และคำที่สะกดผิดเล็กน้อย เช่น เขตุดินแดง ส่วนชื่อที่ไม่มีคำนำหน้า เช่น เขียนแค่ "ลาดพร้าว" จะไม่อ่าน เพราะอาจเป็นชื่อถนนหรือซอย</p></div></li>
+        <li><div class="sn">2</div><div><h3>ตัวเสริม: ข้อมูลในระบบเข้าคู่กันไหม</h3><p>ดูว่าแขวงในช่อง TUMBOL อยู่ในเขต AUMPHER จริงไหม และรหัสไปรษณีย์เป็นของเขตนั้นไหม ถ้าไม่เข้าคู่ขึ้นได้สูงสุด <span class="pill p2">ควรตรวจ</span></p></div></li>
+        <li><div class="sn">3</div><div><h3>ตัวเสริม: หมุดส่งครั้งก่อน</h3><p>LatLng คือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ จึงอาจคลาดจากบ้าน หรือเป็นที่อยู่เดิม ถ้าหมุดอยู่เขตอื่นเกิน 800 ม. ขึ้น <span class="pill p2">ควรตรวจ</span> ถ้าห่างไม่เกิน 800 ม. ถือว่าอยู่แถวรอยต่อเขต ไม่นับ ลูกค้าใหม่จะไม่มีหมุด</p></div></li>
+        <li><div class="sn">4</div><div><h3>ตัวเสริม: ลูกค้าคนเดียวกัน</h3><p>ถ้าเบอร์โทรและที่อยู่เหมือนกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ ขึ้น <span class="pill p2">ควรตรวจ</span></p></div></li>
+        <li><div class="sn">✓</div><div><h3>สรุปสถานะ</h3><p>ใช้สถานะที่หนักที่สุดที่เจอ ถ้าไม่เจออะไรและไม่มีอะไรให้ตรวจเลย (ไม่มีเขต แขวง รหัสไปรษณีย์ในที่อยู่ และไม่มีหมุด) จะขึ้น <span class="pill pna">ตรวจไม่ได้</span></p></div></li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">5 สถานะ และสิ่งที่ต้องทำ</h2>
+      <table class="mini rule"><thead><tr><th>สถานะ</th><th>มาจาก</th><th>ต้องทำ</th><th>ก่อนจัดรอบ</th></tr></thead><tbody>
+        <tr><td><span class="pill p3">เขตผิด</span></td><td>ที่อยู่ลูกค้าบอกเขตอื่น (ขั้น 1 เท่านั้น)</td><td>แก้เขตในระบบตามช่อง "ที่ควรแก้เป็น" ถ้ามั่นใจปานกลาง อ่านที่อยู่ก่อน</td><td>ต้องแก้</td></tr>
+        <tr><td><span class="pill p2">ควรตรวจ</span></td><td>หลายเขต / ชื่อแขวงซ้ำ / ตัวเสริมเจอข้อขัดแย้ง</td><td>เปิดหมุดดู หรือถามลูกค้าตอนโทรนัด</td><td>ต้องเคลียร์</td></tr>
+        <tr><td><span class="pill pna">ตรวจไม่ได้</span></td><td>ไม่มีข้อมูลให้ตรวจเลย</td><td>ถามเขตจากลูกค้าตอนโทรนัด</td><td>ควรเก็บให้ครบ</td></tr>
+        <tr><td><span class="pill p1">ข้อมูลเพิ่ม</span></td><td>ลูกค้าไม่ได้เขียนเขต แต่ตัวเสริมเจอเรื่องเล็ก เช่น หมุดใกล้รอยต่อ</td><td>ไม่ต้องทำ</td><td>ไม่ต้อง</td></tr>
+        <tr><td><span class="pill p0">ปกติ</span></td><td>ที่อยู่ตรงกับ AUMPHER หรือไม่พบข้อขัดแย้ง</td><td>ไม่ต้องทำ (แขวงไม่ตรงไม่นับ)</td><td>ไม่ต้อง</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ตัวอย่าง</h2>
+      <p class="muted" style="margin:0 0 10px">ที่อยู่ดัดแปลงจากไฟล์จริง ตัดชื่อและบ้านเลขที่ออก</p>
+      <div class="exgrid">
+        <div class="exc"><div class="exh"><span class="pill p3">เขตผิด</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ <b>เขตวังทองหลาง</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง</p><p class="why">ลูกค้าเขียนเขตวังทองหลาง ไม่ตรงกับห้วยขวาง หมุดครั้งก่อนก็อยู่วังทองหลาง → แนะนำแขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง 10310 มั่นใจสูง</p></div>
+        <div class="exc"><div class="exh"><span class="pill p3">เขตผิด</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.อ่อนนุช แขวง<b>สวนหลวง</b></p><p><span class="exl">AUMPHER</span> ประเวศ</p><p class="why">ไม่ได้เขียนเขต แต่แขวงสวนหลวงอยู่เขตสวนหลวงเขตเดียว จึงรู้ว่าไม่ตรงกับประเวศ</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 1, Khwaeng Chom Phon, <b>Khet Chatuchak</b></p><p><span class="exl">AUMPHER</span> จตุจักร · TUMBOL ลาดยาว</p><p class="why">อ่านภาษาอังกฤษได้ว่าเขตจตุจักร ตรงกับ AUMPHER ส่วนแขวงไม่ตรง (จอมพล vs ลาดยาว) ไม่นับ</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> คอนโดพระราม 9 <b>แขวงห้วยขวาง เขตบางกะปิ</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง · TUMBOL บางกะปิ</p><p class="why">ลูกค้าเขียนแขวงกับเขตสลับกัน สลับกลับแล้วตรงกับระบบพอดี จึงถือว่าระบบถูก</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ถนนเทียมร่วมมิตร แขวงหัวยขวาง <b>เขตหัวยขวาง</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง</p><p class="why">สะกดผิด (หัวย) ระบบอ่านแบบใกล้เคียงได้ว่าห้วยขวาง และแสดงหมายเหตุว่าอ่านแบบใกล้เคียง</p></div>
+        <div class="exc"><div class="exh"><span class="pill p2">ควรตรวจ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 47 <b>เขตลาดพร้าว</b> แขวงสะพานสอง <b>เขตวังทองหลาง</b></p><p><span class="exl">AUMPHER</span> วังทองหลาง</p><p class="why">มีสองเขตในที่อยู่เดียว ระบบไม่เดา ให้ถามลูกค้าว่าส่งที่ไหน</p></div>
+        <div class="exc"><div class="exh"><span class="pill p2">ควรตรวจ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> รีเจ้นท์ รัชดา, อินทามระ 49</p><p><span class="exl">AUMPHER</span> ดินแดง · หมุดครั้งก่อนอยู่จตุจักร ห่าง 4 กม.</p><p class="why">ไม่ได้เขียนเขต จึงดูตัวเสริม หมุดอยู่เขตอื่นเกิน 800 ม. แต่หมุดอาจคลาด จึงขึ้นแค่ควรตรวจ</p></div>
+        <div class="exc"><div class="exh"><span class="pill pna">ตรวจไม่ได้</span></div><p><span class="exl">ลูกค้าพิมพ์</span> คอนโด Artisan Ratchada ตึก A ถนนเทียมร่วมมิตร</p><p><span class="exl">AUMPHER</span> ห้วยขวาง · ไม่มีหมุด</p><p class="why">ไม่มีเขต แขวง รหัสไปรษณีย์ และไม่มีหมุด ระบบตรวจไม่ได้ ต้องถามลูกค้า</p></div>
+      </div>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ช่อง "ที่ควรแก้เป็น" มาจากไหน</h2>
+      <ol class="plain">
+        <li><b>เขต:</b> เลือกเขตที่มีหลักฐานชี้มากที่สุด เช่น เขตที่ลูกค้าเขียน แขวงที่ลูกค้าเขียน หมุดครั้งก่อน และรหัสไปรษณีย์</li>
+        <li><b>แขวง:</b> ใช้แขวงที่ลูกค้าเขียน ถ้าแขวงนั้นอยู่ในเขตที่แนะนำ</li>
+        <li><b>รหัสไปรษณีย์:</b> ใช้ของแขวงนั้น ถ้าลูกค้าเขียนรหัสที่ตรงกับแขวง จะใช้รหัสที่ลูกค้าเขียน</li>
+        <li><b>ความมั่นใจ:</b> <b>สูง</b> = มีหลักฐานอย่างน้อย 2 แหล่งชี้เขตเดียวกัน <b>ปานกลาง</b> = มีแหล่งเดียว ควรอ่านที่อยู่ก่อนแก้</li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ข้อจำกัดที่ควรรู้</h2>
+      <ul class="plain">
+        <li>ตรวจระดับ <b>เขต</b> เท่านั้น แขวงไม่ตรงไม่มีผลกับสถานะ</li>
+        <li>ถ้าลูกค้าเขียนเขตผิดเอง ระบบจะเชื่อที่ลูกค้าเขียน จึงควรดูความมั่นใจประกอบ</li>
+        <li>หมุดคือจุดปิดงานครั้งก่อน ลูกค้าที่ย้ายบ้านหรือลูกค้าใหม่ หมุดจะไม่ช่วย</li>
+        <li>ชื่อพื้นที่ที่ไม่มีคำนำหน้าจะไม่ถูกอ่าน ยกเว้นแบบ "ไทย/ English" ของ Lazada</li>
+        <li>ข้อมูลแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ มาจาก thai-province-data, jquery.Thailand.js และ OpenGISData-Thailand ใกล้รอยต่อเขตอาจคลาดได้เล็กน้อย</li>
+        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์</li>
+      </ul>
+    </div>
   </section>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -690,6 +786,8 @@ d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) readFile(f)
 $('tol').onchange=()=>{if(RAW) run();};
 ['q'].forEach(id=>$(id).addEventListener('input',filter));
 ['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
+function route(){ const how=location.hash==='#how'; $('pageCheck').classList.toggle('hidden',how); $('pageHow').classList.toggle('hidden',!how); $('tabHow').classList.toggle('on',how); $('tabCheck').classList.toggle('on',!how); $('copyBtn').style.visibility=$('xlsxBtn').style.visibility=how?'hidden':''; }
+window.addEventListener('hashchange',route); route();
 $('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX;
 })();
 </script>
