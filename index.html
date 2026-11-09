@@ -276,9 +276,9 @@ a{color:var(--accent)}
   }
 
   // ---------- text extraction ----------
-  const RX_T = /(แขวง|ตำบล|ต\.)\s*/g;
-  const RX_A = /(เขต|อำเภอ|อ\.)\s*/g;
-  const RX_P = /(จังหวัด|จ\.)\s*/g;
+  const RX_T = /(แขวง|ตำบล|ต\.)[\s.]*/g;
+  const RX_A = /(เขต|อำเภอ|อ\.)[\s.]*/g;
+  const RX_P = /(จังหวัด|จ\.)[\s.]*/g;
   function matchAt(text, pos, names) {
     const rest = text.slice(pos).replace(/\s/g, '');
     for (const n of names) if (rest.startsWith(n)) return n;
@@ -340,13 +340,21 @@ a{color:var(--accent)}
     statedA = statedA.map(n => n === 'เมือง' ? 'เมือง' + ctxP : n).filter(n => ix.amp.has(n));
     // prefer amphoe that exists in the context province
     statedA = [...new Set(statedA)].filter(n => [...ix.amp.get(n)].some(p => key(p) === ctxP || key(p) === P));
+    let statedT = [...new Set(findPrefixed(cust, RX_T, ix.tambNames).map(x => x.name))]
+      .filter(n => (ix.tamb.get(n) || []).some(r => key(r.p) === ctxP || key(r.p) === P));
+    // customer swapped แขวง/เขต (e.g. "แขวงห้วยขวาง เขตบางกะปิ") and the swap equals the system pair → treat as confirming
+    let swapped = false;
+    if (T && T !== A && statedA.includes(T) && statedT.includes(A) && ix.triple.has(T + '|' + A + '|' + P)) {
+      swapped = true;
+      statedA = statedA.filter(n => n !== T).concat([A]);
+      statedT = statedT.filter(n => n !== A).concat([T]);
+      add(1, 'TXT_SWAP', `ลูกค้าเขียนแขวงกับเขตสลับกัน ("แขวง${o.AUMPHER} เขต${o.TUMBOL}") — ระบบถูกแล้ว`);
+    }
     if (statedA.length && !statedA.includes(A)) {
       add(3, 'TXT_AMP', `ลูกค้าเขียน "เขต/อ.${statedA.join(', ')}" แต่ระบบเป็นเขต ${o.AUMPHER}`);
       statedA.forEach(a => evid.push({ a, p: [...ix.amp.get(a)].find(p => key(p) === ctxP) || o.PROVICE, src: 'ที่อยู่ลูกค้า' }));
     }
 
-    const statedT = [...new Set(findPrefixed(cust, RX_T, ix.tambNames).map(x => x.name))]
-      .filter(n => (ix.tamb.get(n) || []).some(r => key(r.p) === ctxP || key(r.p) === P));
     if (statedT.length && T && !statedT.includes(T)) {
       for (const n of statedT) {
         const recs = ix.tamb.get(n).filter(r => key(r.p) === ctxP || key(r.p) === P);
@@ -371,7 +379,7 @@ a{color:var(--accent)}
     if (ll.length === 2 && isFinite(ll[0]) && isFinite(ll[1]) && ll[0] > 5 && ll[0] < 21 && ll[1] > 97 && ll[1] < 106) {
       const [lat, lng] = ll; const sysRec = ix.poly.get(sysAP);
       pin = { lat, lng, amp: null, dist: 0 };
-      if (sysRec && inRec(lng, lat, sysRec)) pin.amp = sysRec.a;
+      if (sysRec && inRec(lng, lat, sysRec)) { pin.amp = sysRec.a; pin.inSys = true; }
       else {
         const hit = ix.polys.find(r => inRec(lng, lat, r));
         pin.amp = hit ? hit.a : null; pin.prov = hit ? hit.p : null;
@@ -396,6 +404,16 @@ a{color:var(--accent)}
     const textOther = issues.some(i => i.code === 'TXT_AMP' || i.code === 'TXT_TAMB_A' || i.code === 'TXT_PROV');
     const confirms = !textOther && (statedA.includes(A) || (A.length >= 3 && cust.replace(/\s/g, '').includes(A)));
     if (confirms) issues.forEach(i => { if (i.code === 'SYS_ZIP' || i.code === 'TXT_ZIP') i.lvl = 1; });
+    // customer confirms the system amphoe → a wrong system tambon is a tambon fix, not a district move
+    if (statedA.includes(A)) {
+      issues.forEach(i => { if (i.code === 'SYS_T_A') { i.lvl = 1; i.msg += ' — ลูกค้าระบุเขตตรงกับระบบ แก้แค่แขวง'; } });
+      for (let k = evid.length - 1; k >= 0; k--) if (evid[k].src === 'แขวงในระบบ') evid.splice(k, 1);
+    }
+    // pin sits inside the system amphoe → text evidence alone is not enough to call it wrong
+    if (pin && pin.inSys && issues.some(i => i.lvl === 3)) {
+      issues.forEach(i => { if (i.lvl === 3) i.lvl = 2; });
+      add(2, 'PIN_SYS', `หมุดแผนที่อยู่ในเขต ${o.AUMPHER} ตรงกับระบบ — ข้อมูลขัดกัน ควรถามลูกค้า`);
+    }
 
     // suggestion: amphoe by evidence votes, then tambon + zip inside that amphoe
     const votes = new Map();
@@ -404,7 +422,7 @@ a{color:var(--accent)}
     const sa = best ? best.a : o.AUMPHER, sp = best ? best.p : o.PROVICE;
     const inAmp = n => (ix.tamb.get(n) || []).find(r => key(r.a) === key(sa) && key(r.p) === key(sp));
     let st = null, src = best ? [...best.src] : [];
-    const tStated = statedT.map(inAmp).find(Boolean);
+    const tStated = (T && statedT.includes(T) && inAmp(T)) ? null : statedT.map(inAmp).find(Boolean);
     if (tStated) { st = tStated; if (!best && key(st.t) !== T) src = ['แขวงที่ลูกค้าเขียน']; }
     else if (T && inAmp(T)) st = inAmp(T);
     let sz = null;
