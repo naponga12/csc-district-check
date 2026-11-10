@@ -123,7 +123,7 @@ a{color:var(--accent)}
   <div class="drop" id="drop">
     <div>
       <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
-      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณเท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์ (ระบบบันทึกแค่วันเวลาที่ใช้และจำนวนที่ตรวจ ไม่มีข้อมูลลูกค้า)</p>
+      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณ ระบบส่งเฉพาะข้อความที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจ ไปตรวจกับ Google Maps (ตัดเบอร์โทรออก) และบันทึกวันเวลาที่ใช้กับจำนวนที่ตรวจ</p>
       <p class="muted" id="refInfo" style="font-size:13px">กำลังโหลดข้อมูลแขวง/เขต …</p>
     </div>
     <div class="controls">
@@ -148,6 +148,7 @@ a{color:var(--accent)}
   <section id="results" class="hidden" style="display:grid;gap:18px">
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="dropNote" style="margin:-8px 0 0;font-size:13px"></p>
+    <p class="muted" id="geoInfo" style="margin:-8px 0 0;font-size:13px" aria-live="polite"></p>
     <div class="two">
       <div class="card"><h2>แยกตามช่องทาง</h2><div id="byChannel"></div></div>
       <div class="card"><h2>เขตในระบบ → เขตที่ควรเป็น (พบบ่อย)</h2><div id="byPair"></div></div>
@@ -195,6 +196,13 @@ a{color:var(--accent)}
           <p class="note">ระบบอ่านได้ทั้งแบบไทย (แขวง ตำบล ต. เขต อำเภอ อ. จังหวัด จ.) ภาษาอังกฤษ (Khet, Khwaeng, District, Subdistrict) แบบ Lazada "ราชเทวี/ Ratchathewi" และคำที่สะกดผิดเล็กน้อย เช่น เขตุดินแดง ส่วนชื่อที่ไม่มีคำนำหน้า เช่น เขียนแค่ "ลาดพร้าว" จะไม่อ่าน เพราะอาจเป็นชื่อถนนหรือซอย</p></div></li>
         <li><div class="sn">2</div><div><h3>ตัวเสริม: ข้อมูลในระบบเข้าคู่กันไหม</h3><p>ดูว่าแขวงในช่อง TUMBOL อยู่ในเขต AUMPHER จริงไหม และรหัสไปรษณีย์เป็นของเขตนั้นไหม ถ้าไม่เข้าคู่ขึ้นได้สูงสุด <span class="pill p2">ควรตรวจ</span></p></div></li>
         <li><div class="sn">3</div><div><h3>ตัวเสริม: หมุดส่งครั้งก่อน</h3><p>LatLng คือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ จึงอาจคลาดจากบ้าน หรือเป็นที่อยู่เดิม ถ้าหมุดอยู่เขตอื่นเกิน 800 ม. ขึ้น <span class="pill p2">ควรตรวจ</span> ถ้าห่างไม่เกิน 800 ม. ถือว่าอยู่แถวรอยต่อเขต ไม่นับ ลูกค้าใหม่จะไม่มีหมุด</p></div></li>
+        <li><div class="sn">3b</div><div><h3>ตัวเสริม: Google Maps</h3><p>หลังตรวจเสร็จ ระบบส่งข้อความที่อยู่ของออเดอร์ที่ขึ้น <span class="pill pna">ตรวจไม่ได้</span> และ <span class="pill p2">ควรตรวจ</span> ไปหาตำแหน่งใน Google Maps (ตัดเบอร์โทรออก) แล้วดูว่าตำแหน่งนั้นอยู่เขตไหน ใช้เฉพาะผลที่ Google หาเจอระดับอาคารหรือบ้านเลขที่ ผลแบบคร่าว ๆ เช่น กลางถนนหรือกลางเขต จะไม่นำมาใช้</p>
+          <table class="mini rule"><thead><tr><th>Google Maps เจอที่</th><th>ผล</th></tr></thead><tbody>
+            <tr><td>เขตเดียวกับ AUMPHER (หรือห่างไม่เกิน 800 ม.)</td><td>ตรวจไม่ได้ → <span class="pill p0">ปกติ</span> · ควรตรวจ ยังคงเป็นควรตรวจ</td></tr>
+            <tr><td>เขตอื่น</td><td><span class="pill p2">ควรตรวจ</span> และแนะนำเขตตาม Google</td></tr>
+            <tr><td>หาไม่เจอ / ไม่ละเอียดพอ</td><td>สถานะเดิม</td></tr>
+          </tbody></table>
+          <p class="note">ใช้ได้วันละประมาณ 1,000 ที่อยู่ (โควตาฟรีของ Google) ระบบจำผลไว้ 6 ชั่วโมง เปิดไฟล์เดิมซ้ำจึงไม่เปลืองโควตา</p></div></li>
         <li><div class="sn">4</div><div><h3>ตัวเสริม: ลูกค้าคนเดียวกัน</h3><p>ถ้าเบอร์โทรและที่อยู่เหมือนกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ ขึ้น <span class="pill p2">ควรตรวจ</span></p></div></li>
         <li><div class="sn">✓</div><div><h3>สรุปสถานะ</h3><p>ใช้สถานะที่หนักที่สุดที่เจอ ถ้าไม่เจออะไรและไม่มีอะไรให้ตรวจเลย (ไม่มีเขต แขวง รหัสไปรษณีย์ในที่อยู่ และไม่มีหมุด) จะขึ้น <span class="pill pna">ตรวจไม่ได้</span></p></div></li>
       </ol>
@@ -204,7 +212,7 @@ a{color:var(--accent)}
       <h2 class="hh">5 สถานะ และสิ่งที่ต้องทำ</h2>
       <table class="mini rule"><thead><tr><th>สถานะ</th><th>มาจาก</th><th>ต้องทำ</th><th>ก่อนจัดรอบ</th></tr></thead><tbody>
         <tr><td><span class="pill p3">เขตผิด</span></td><td>ที่อยู่ลูกค้าบอกเขตอื่น (ขั้น 1 เท่านั้น)</td><td>แก้เขตในระบบตามช่อง "ที่ควรแก้เป็น" ถ้ามั่นใจปานกลาง อ่านที่อยู่ก่อน</td><td>ต้องแก้</td></tr>
-        <tr><td><span class="pill p2">ควรตรวจ</span></td><td>หลายเขต / ชื่อแขวงซ้ำ / ตัวเสริมเจอข้อขัดแย้ง</td><td>เปิดหมุดดู หรือถามลูกค้าตอนโทรนัด</td><td>ต้องเคลียร์</td></tr>
+        <tr><td><span class="pill p2">ควรตรวจ</span></td><td>หลายเขต / ชื่อแขวงซ้ำ / ตัวเสริมหรือ Google Maps เจอข้อขัดแย้ง</td><td>เปิดหมุดดู หรือถามลูกค้าตอนโทรนัด</td><td>ต้องเคลียร์</td></tr>
         <tr><td><span class="pill pna">ตรวจไม่ได้</span></td><td>ไม่มีข้อมูลให้ตรวจเลย</td><td>ถามเขตจากลูกค้าตอนโทรนัด</td><td>ควรเก็บให้ครบ</td></tr>
         <tr><td><span class="pill p1">ข้อมูลเพิ่ม</span></td><td>ลูกค้าไม่ได้เขียนเขต แต่ตัวเสริมเจอเรื่องเล็ก เช่น หมุดใกล้รอยต่อ</td><td>ไม่ต้องทำ</td><td>ไม่ต้อง</td></tr>
         <tr><td><span class="pill p0">ปกติ</span></td><td>ที่อยู่ตรงกับ AUMPHER หรือไม่พบข้อขัดแย้ง</td><td>ไม่ต้องทำ (แขวงไม่ตรงไม่นับ)</td><td>ไม่ต้อง</td></tr>
@@ -244,7 +252,8 @@ a{color:var(--accent)}
         <li>หมุดคือจุดปิดงานครั้งก่อน ลูกค้าที่ย้ายบ้านหรือลูกค้าใหม่ หมุดจะไม่ช่วย</li>
         <li>ชื่อพื้นที่ที่ไม่มีคำนำหน้าจะไม่ถูกอ่าน ยกเว้นแบบ "ไทย/ English" ของ Lazada</li>
         <li>ข้อมูลแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ มาจาก thai-province-data, jquery.Thailand.js และ OpenGISData-Thailand ใกล้รอยต่อเขตอาจคลาดได้เล็กน้อย</li>
-        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่ได้ส่งขึ้นเซิร์ฟเวอร์ ระบบบันทึกการใช้งานแค่วันเวลา การกระทำ (เปิดหน้า ตรวจไฟล์ ดาวน์โหลด คัดลอก) ชื่อไฟล์ และจำนวนออเดอร์แต่ละสถานะ ไม่มีที่อยู่หรือข้อมูลลูกค้า</li>
+        <li>Google Maps อ่านที่อยู่ไทยได้ไม่ทุกแบบ ที่อยู่ที่มีแค่ชื่อถนนยาวหรือชื่อหมู่บ้านทั่วไปมักหาไม่เจอแบบละเอียด และ Google ไม่ได้ทำให้ขึ้นเขตผิด</li>
+        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้ ข้อความที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจถูกส่งไป Google Maps ระบบบันทึกการใช้งานแค่วันเวลา การกระทำ (เปิดหน้า ตรวจไฟล์ ดาวน์โหลด คัดลอก) ชื่อไฟล์ และจำนวนออเดอร์แต่ละสถานะ ไม่มีที่อยู่หรือข้อมูลลูกค้า</li>
       </ul>
     </div>
   </section>
@@ -643,6 +652,60 @@ a{color:var(--accent)}
     });
     return list;
   }
+
+  // Google Maps geocode result → supporting evidence only (max "ควรตรวจ")
+  const GEO_PRECISE_TYPES = ['premise', 'subpremise', 'establishment', 'point_of_interest', 'street_address'];
+  function geoPrecise(g) {
+    if (!g || g.none || g.err || !isFinite(g.lat) || !isFinite(g.lng)) return false;
+    const ty = g.ty || [];
+    if (g.pm && g.lt !== 'ROOFTOP') return false;
+    if (g.lt === 'ROOFTOP' || g.lt === 'RANGE_INTERPOLATED') return true;
+    return g.lt === 'GEOMETRIC_CENTER' && ty.some(t => GEO_PRECISE_TYPES.includes(t));
+  }
+  function geoQuery(x) { // text sent to Google: customer-typed part, phones removed, + province
+    let q = String(x.cust || '').replace(/(\+?66|0)[\s-]?\d{1,2}[\s-]?\d{3}[\s-]?\d{3,4}/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q.replace(/[\s\d\/.,-]/g, '').length < 4) return null;
+    const P = String(x.r.PROVICE || '').trim();
+    if (P && !q.includes(P.replace('กรุงเทพมหานคร', 'กรุงเทพ'))) q += ' ' + P;
+    return q;
+  }
+  function applyGeo(x, g, ix, opt) {
+    opt = Object.assign({ pinToleranceM: 800 }, opt || {});
+    const o = x.r, A = key(o.AUMPHER), P = key(o.PROVICE);
+    x.geo = g;
+    if (!g || g.none) { x.geoTxt = 'ไม่พบ'; x.issues.push({ lvl: 0, code: 'GMAP_NONE', msg: 'Google Maps หาที่อยู่นี้ไม่เจอ' }); return 'none'; }
+    if (g.err) { x.geoTxt = 'ตรวจไม่ได้'; return 'err'; }
+    if (!geoPrecise(g)) { x.geoTxt = 'ไม่ละเอียดพอ: ' + (g.fa || ''); x.issues.push({ lvl: 0, code: 'GMAP_WEAK', msg: `Google Maps หาเจอแบบคร่าว ๆ (${g.fa || ''}) ไม่นำมาใช้` }); return 'weak'; }
+    const sysRec = ix.poly.get(A + '|' + P);
+    let hit = null, dist = 0;
+    if (sysRec && inRec(g.lng, g.lat, sysRec)) hit = sysRec;
+    else { hit = ix.polys.find(r => inRec(g.lng, g.lat, r)) || null; dist = sysRec ? Math.round(distToRecM(g.lng, g.lat, sysRec)) : null; }
+    const where = hit ? `เขต ${hit.a}${key(hit.p) !== P ? ' จ.' + hit.p : ''}` : 'นอกเขตที่รู้จัก';
+    x.geoTxt = where + ' · ' + (g.fa || '');
+    if (hit === sysRec || (sysRec && dist !== null && dist <= opt.pinToleranceM)) {
+      x.issues.push({ lvl: 0, code: 'GMAP_OK', msg: hit === sysRec ? `Google Maps: ที่อยู่นี้อยู่ในเขต ${o.AUMPHER} ตรงกับระบบ` : `Google Maps: ที่อยู่นี้อยู่${where} ใกล้รอยต่อเขต ${o.AUMPHER} (~${dist} ม.)` });
+      if (x.unverifiable) x.unverifiable = false;
+      return 'ok';
+    }
+    if (!sysRec) { x.issues.push({ lvl: 0, code: 'GMAP_NA', msg: `Google Maps: ที่อยู่นี้อยู่${where}` }); return 'na'; }
+    x.issues.push({ lvl: 2, code: 'GMAP', msg: `Google Maps หาที่อยู่นี้เจอใน${where} ห่างจากเขต ${o.AUMPHER} ~${(dist / 1000).toFixed(1)} กม.` + (g.pm ? ' (Google จับคู่ที่อยู่ได้บางส่วน อาจเป็นสถานที่อื่น)' : '') + ' — ควรตรวจก่อนแก้' });
+    x.lvl = Math.max(x.lvl, 2); x.unverifiable = false;
+    if (hit) {
+      const s = x.suggest;
+      if (s && s.ampChanged && key(s.a) === key(hit.a) && key(s.p) === key(hit.p)) { if (!s.src.includes('Google Maps')) s.src.push('Google Maps'); }
+      else if (!s || !s.ampChanged) {
+        // tambon from Google's address components, else none
+        const comp = (g.c || []).map(c => key(String(c[0]).replace(/^(แขวง|ตำบล|ต\.)\s*/, '')));
+        const recs = comp.map(n => (ix.tamb.get(n) || []).find(r => key(r.a) === key(hit.a) && key(r.p) === key(hit.p))).filter(Boolean);
+        const st = recs[0] || null;
+        const gz = (g.c || []).find(c => c[1] === 'postal_code');
+        const az = ix.ampZips.get(key(hit.a) + '|' + key(hit.p));
+        const zip = st ? (gz && st.zips.includes(gz[0]) ? gz[0] : st.zips[0]) : (gz && az && az.has(gz[0]) ? gz[0] : (az && az.size === 1 ? [...az][0] : null));
+        x.suggest = { a: hit.a, p: hit.p, t: st ? st.t : null, zip, src: ['Google Maps'], ampChanged: true };
+      }
+    }
+    return 'other';
+  }
   const COMPANIES = ['1247', '1230'];
   function companyFilter(rows) { // keep only the companies CSC handles
     if (!rows.length || !('COMPANY_ID' in rows[0])) return { keep: rows, dropped: {}, hasCol: false };
@@ -652,7 +715,7 @@ a{color:var(--accent)}
   }
   const REQUIRED = ['ORDERID', 'CHANNEL', 'ADDRESS', 'TUMBOL', 'AUMPHER', 'PROVICE', 'ZIPCODE'];
   const OPTIONAL = ['LatLng', 'TEL', 'CUSTOMER_NAME'];
-  root.AddrCheck = { buildIndex, checkOrder, crossCheck, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
+  root.AddrCheck = { buildIndex, checkOrder, crossCheck, applyGeo, geoQuery, geoPrecise, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
   if (typeof module !== 'undefined') module.exports = root.AddrCheck;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -666,9 +729,37 @@ const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textCont
   .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
   .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
 function ix(){ return IX; }
-const LOG_URL='https://script.google.com/macros/s/AKfycbyQUjYB5obPZiNzasvc2IC71sra07ETW5h_PtVPu_RkTJFSCaYxM-V5I9EUknikd0IJNQ/exec';
+const LOG_URL='https://script.google.com/macros/s/AKfycbybGOVADl7gO3P1lcPxBRdYnwjpIjYUu8G5S4bWriBf-vzzfNljkCnL-VJb2L0mLfCY_w/exec';
 function logUse(a,extra){ try{ if(!LOG_URL||LOG_URL.indexOf('__')===0||!/^https?:$/.test(location.protocol)||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return; fetch(LOG_URL,{method:'POST',mode:'no-cors',keepalive:true,body:JSON.stringify(Object.assign({a},extra||{}))}).catch(()=>{}); }catch(e){} }
 function logCheck(){ const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; }); logUse('ตรวจไฟล์',{f:SRCNAME,o:RES.length,x:dropOrders().total,c3:c[3],c2:c[2],na:c.na,c1:c[1],c0:c[0]}); }
+function geoOn(){ return !!LOG_URL && LOG_URL.indexOf('__')!==0 && (window.__GEO_FORCE || (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname))); }
+let GEO_RUN=0; const GEO_MEM=new Map();
+async function geoPass(){
+  if(!geoOn()||!RES.length) return;
+  const run=++GEO_RUN, tol=+$('tol').value||0, I=ix();
+  const todo=RES.filter(x=>x.unverifiable||x.lvl===2).map(x=>({x,q:AddrCheck.geoQuery(x)})).filter(o=>o.q);
+  if(!todo.length){ $('geoInfo').textContent=''; return; }
+  const st={ok:0,other:0,none:0,weak:0,err:0,na:0}; let done=0, quota=false, net=false;
+  const msg=fin=>{ $('geoInfo').textContent=fin
+    ?`ตรวจที่อยู่กับ Google Maps ${todo.length.toLocaleString()} ออเดอร์ (ตรวจไม่ได้ + ควรตรวจ): ตรงกับระบบ ${st.ok} · อยู่เขตอื่น ${st.other} (ขึ้นควรตรวจ) · หาไม่เจอหรือไม่ละเอียดพอ ${st.none+st.weak}`+(quota?' · โควตา Google วันนี้หมด ตรวจไม่ครบ ลองใหม่พรุ่งนี้':'')+(net?' · บางส่วนเชื่อมต่อ Google ไม่ได้':'')
+    :`กำลังตรวจที่อยู่กับ Google Maps ${done.toLocaleString()}/${todo.length.toLocaleString()} ออเดอร์ …`; };
+  msg(false);
+  for(let i=0;i<todo.length;i+=40){
+    if(run!==GEO_RUN) return;
+    const part=todo.slice(i,i+40), need=part.filter(o=>!GEO_MEM.has(o.q));
+    if(need.length&&!quota){
+      try{ const r=await fetch(LOG_URL,{method:'POST',body:JSON.stringify({a:'geocode',q:need.map((o,j)=>[j,o.q])})}); const js=await r.json();
+        js.forEach(([j,g])=>{ if(g.err==='quota') quota=true; if(!g.err) GEO_MEM.set(need[j].q,g); else need[j].gerr=g; }); }
+      catch(e){ net=true; need.forEach(o=>o.gerr={err:'net'}); }
+    }
+    if(run!==GEO_RUN) return;
+    part.forEach(o=>{ const g=GEO_MEM.get(o.q)||o.gerr||{err:'quota'}; st[AddrCheck.applyGeo(o.x,g,I,{pinToleranceM:tol})]++; });
+    done+=part.length; msg(false);
+  }
+  const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
+  msg(true); summary(); filter();
+  logUse('ตรวจกับ Google Maps',{f:SRCNAME,o:todo.length,c2:st.other,c0:st.ok});
+}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 
 function readFile(f){
@@ -699,7 +790,7 @@ function run(){
   $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden'); $('xlsxBtn').classList.remove('hidden');
   const chs=[...new Set(RES.map(x=>x.r.CHANNEL))].sort(); $('fCh').innerHTML='<option value="">ทั้งหมด</option>'+chs.map(c=>`<option>${esc(c)}</option>`).join('');
   const amps=[...new Set(RES.map(x=>x.r.AUMPHER))].sort((a,b)=>a.localeCompare(b,'th')); $('fAmp').innerHTML='<option value="">ทั้งหมด</option>'+amps.map(c=>`<option>${esc(c)}</option>`).join('');
-  summary(); filter();
+  summary(); filter(); geoPass();
 }
 function summary(){
   const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; });
@@ -752,9 +843,9 @@ function more(){
   $('count').textContent=`แสดง ${shown.toLocaleString()} จาก ${view.length.toLocaleString()} ออเดอร์`;
   $('more').classList.toggle('hidden',shown>=view.length);
 }
-const HEAD=['ระดับ','ที่อยู่ลูกค้า vs AUMPHER','ORDERID','COMPANY_ID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
+const HEAD=['ระดับ','ที่อยู่ลูกค้า vs AUMPHER','ORDERID','COMPANY_ID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','Google Maps','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
 const LVNAME=x=>x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
-function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,'','','']); }
+function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,x.geoTxt||'','','','']); }
 function copyTSV(){
   const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
   const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
@@ -763,7 +854,7 @@ function copyTSV(){
 function downloadXLSX(){
   try{
     const wb=XLSX.utils.book_new();
-    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
+    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,40,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
     const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
     const chc=chanCounts(); const ch={}; Object.entries(chc).forEach(([k,v])=>ch[k]=[v.n].concat(ST.map(s=>v[s])));
     const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
