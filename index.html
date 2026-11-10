@@ -102,6 +102,7 @@ a{color:var(--accent)}
 .exc{border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px} .exc p{margin:4px 0} .exh{margin-bottom:6px}
 .why{color:var(--muted);font-size:13px;border-top:1px dashed var(--line);padding-top:6px;margin-top:8px!important}
 .plain{margin:0;padding-left:20px;display:grid;gap:6px}
+.steps .plain li{display:list-item;border:0;padding:0;border-radius:0;background:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -197,9 +198,23 @@ a{color:var(--accent)}
         <li><div class="sn">2</div><div><h3>ตัวเสริม: ข้อมูลในระบบเข้าคู่กันไหม</h3><p>ดูว่าแขวงในช่อง TUMBOL อยู่ในเขต AUMPHER จริงไหม และรหัสไปรษณีย์เป็นของเขตนั้นไหม ถ้าไม่เข้าคู่ขึ้นได้สูงสุด <span class="pill p2">ควรตรวจ</span></p></div></li>
         <li><div class="sn">3</div><div><h3>ตัวเสริม: หมุดส่งครั้งก่อน</h3><p>LatLng คือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ จึงอาจคลาดจากบ้าน หรือเป็นที่อยู่เดิม ถ้าหมุดอยู่เขตอื่นเกิน 800 ม. ขึ้น <span class="pill p2">ควรตรวจ</span> ถ้าห่างไม่เกิน 800 ม. ถือว่าอยู่แถวรอยต่อเขต ไม่นับ ลูกค้าใหม่จะไม่มีหมุด</p></div></li>
         <li><div class="sn">3b</div><div><h3>ตัวเสริม: Google Maps</h3><p>หลังตรวจเสร็จ ระบบส่งข้อความที่อยู่ของออเดอร์ที่ขึ้น <span class="pill pna">ตรวจไม่ได้</span> และ <span class="pill p2">ควรตรวจ</span> ไปหาตำแหน่งใน Google Maps (ตัดเบอร์โทรออก) แล้วดูว่าตำแหน่งนั้นอยู่เขตไหน ใช้เฉพาะผลที่ Google หาเจอระดับอาคารหรือบ้านเลขที่ ผลแบบคร่าว ๆ เช่น กลางถนนหรือกลางเขต จะไม่นำมาใช้</p>
+          <p style="margin:8px 0 4px"><b>ข้อมูลที่ส่งไป Google</b> — ส่งเฉพาะข้อความที่ลูกค้าพิมพ์เอง แล้วเติมจังหวัดท้ายข้อความ</p>
+          <table class="mini rule"><thead><tr><th>ขั้น</th><th>ทำอะไร</th><th>ตัวอย่าง</th></tr></thead><tbody>
+            <tr><td>1</td><td>เอาข้อความจากช่อง ADDRESS</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 โทร 08x-xxx-xxxx <s>บางซื่อ บางซื่อ กรุงเทพมหานคร</s></td></tr>
+            <tr><td>2</td><td>ตัดแขวง/เขต/จังหวัดที่ระบบต่อท้ายไว้ออก (แบบเดียวกับขั้น 0b)</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 โทร 08x-xxx-xxxx</td></tr>
+            <tr><td>3</td><td>ตัดเบอร์โทรออก</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11</td></tr>
+            <tr><td>4</td><td>เติมจังหวัดจากช่อง PROVICE (ถ้าลูกค้ายังไม่ได้เขียน) เพื่อไม่ให้ Google ไปหาจังหวัดอื่น</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 <b>กรุงเทพมหานคร</b></td></tr>
+          </tbody></table>
+          <p class="note"><b>ตั้งใจไม่ส่ง TUMBOL, AUMPHER และ ZIPCODE ของระบบ</b> เพราะช่องพวกนี้คือสิ่งที่เรากำลังตรวจว่าผิดหรือเปล่า ถ้าส่งไปด้วย Google จะหาตำแหน่งตามคำตอบของระบบ แล้วผลจะออกมาว่า "ตรง" เสมอ การตรวจก็ไม่มีความหมาย ส่วนชื่อที่ลูกค้าพิมพ์ปนไว้ในช่องที่อยู่ ระบบตัดออกไม่ได้ จะถูกส่งไปด้วย</p>
+          <p style="margin:10px 0 4px"><b>Google ส่งอะไรกลับมา และระบบใช้อย่างไร</b></p>
+          <ol class="plain">
+            <li>Google ส่งพิกัด (ละติจูด/ลองจิจูด) ชื่อสถานที่ และระดับความแม่นกลับมา</li>
+            <li>ใช้เฉพาะผลที่แม่นระดับอาคารหรือบ้านเลขที่ ถ้า Google จับคู่ได้แค่บางส่วน ต้องแม่นระดับอาคารเท่านั้นจึงจะใช้ ผลแบบกลางถนน กลางหมู่บ้าน หรือกลางเขต จะไม่ใช้</li>
+            <li>ดูว่าพิกัดตกอยู่ในเขตไหน โดยใช้ขอบเขตเขตชุดเดียวกับที่ตรวจหมุด แล้วเทียบกับ AUMPHER</li>
+          </ol>
           <table class="mini rule"><thead><tr><th>Google Maps เจอที่</th><th>ผล</th></tr></thead><tbody>
             <tr><td>เขตเดียวกับ AUMPHER (หรือห่างไม่เกิน 800 ม.)</td><td>ตรวจไม่ได้ → <span class="pill p0">ปกติ</span> · ควรตรวจ ยังคงเป็นควรตรวจ</td></tr>
-            <tr><td>เขตอื่น</td><td><span class="pill p2">ควรตรวจ</span> และแนะนำเขตตาม Google</td></tr>
+            <tr><td>เขตอื่น</td><td><span class="pill p2">ควรตรวจ</span> และแนะนำเขตตาม Google (ถ้า Google จับคู่ได้บางส่วน จะมีหมายเหตุว่าอาจเป็นสถานที่อื่น)</td></tr>
             <tr><td>หาไม่เจอ / ไม่ละเอียดพอ</td><td>สถานะเดิม</td></tr>
           </tbody></table>
           <p class="note">ใช้ได้วันละประมาณ 1,000 ที่อยู่ (โควตาฟรีของ Google) ระบบจำผลไว้ 6 ชั่วโมง เปิดไฟล์เดิมซ้ำจึงไม่เปลืองโควตา</p></div></li>
