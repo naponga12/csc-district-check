@@ -90,6 +90,9 @@ a{color:var(--accent)}
 .geobox.run{border-left-color:var(--warn);background:var(--warn-bg)} .geobox.done{border-left-color:var(--ok);background:var(--ok-bg)} .geobox.warn{border-left-color:var(--crit);background:var(--crit-bg)}
 .gbar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden} .gbar i{display:block;height:100%;background:var(--warn);transition:width .3s}
 .btn:disabled{opacity:.55;cursor:wait}
+.dl{position:relative;display:inline-block}
+.dlmenu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.15);min-width:300px;padding:4px;display:grid}
+.dlmenu button{all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;display:grid;gap:2px;font-size:14px} .dlmenu button:hover,.dlmenu button:focus-visible{background:var(--bg)} .dlmenu small{color:var(--muted);font-size:12px}
 .btn.sm{padding:4px 10px;font-size:13px;min-height:0}
 .fixbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pick{margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:grid;gap:6px;min-width:240px}
@@ -129,7 +132,12 @@ tr.fixed td{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
     </div>
     <div class="controls">
       <button class="btn hidden" id="xlsxBtn" type="button">ดาวน์โหลด Excel</button>
-      <button class="btn hidden" id="tmsBtn" type="button" title="ไฟล์ที่ import เข้ามา แก้แขวง/เขต/จังหวัด/รหัสไปรษณีย์ตามที่ยืนยัน ใช้อัปโหลดเข้า TMS">ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (0)</button>
+      <span class="dl hidden" id="dlWrap"><button class="btn" id="tmsBtn" type="button" aria-haspopup="true" aria-expanded="false">ดาวน์โหลดไฟล์ ▾</button>
+        <span class="dlmenu hidden" id="dlMenu" role="menu">
+          <button type="button" role="menuitem" data-dl="fixed"><b>ไฟล์แก้เขตสำหรับ TMS (เฉพาะที่แก้)</b><small id="dlFixedN">0 ออเดอร์</small></button>
+          <button type="button" role="menuitem" data-dl="all"><b>ไฟล์ทั้งหมด (รวมที่แก้แล้ว)</b><small id="dlAllN">ทุกแถว</small></button>
+          <button type="button" role="menuitem" data-dl="orig"><b>ไฟล์ต้นฉบับ</b><small>ไฟล์ที่อัปโหลดเข้ามา ไม่แก้อะไร</small></button>
+        </span></span>
       <button class="btn ghost hidden" id="copyBtn" type="button">คัดลอกผลไปวาง Excel</button>
     </div>
   </header>
@@ -294,7 +302,12 @@ tr.fixed td{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
       <ol class="plain" style="margin-top:10px">
         <li>กดยืนยันแล้ว ออเดอร์เปลี่ยนเป็น <span class="pill p0">ปกติ</span> มีป้าย "แก้แล้ว" ดูรายการที่แก้ทั้งหมดได้จากตัวกรอง "แก้แล้ว"</li>
         <li>ทุกการแก้ถูกบันทึกลงแท็บ "แก้เขต" ใน Sheet บันทึกการใช้งาน (เวลา ORDERID ค่าเดิม ค่าใหม่ วิธีที่แก้) ถ้าเปิดไฟล์ที่มีออเดอร์เดิมอีกครั้ง หรือคนอื่นเปิด จะเห็นว่าแก้แล้ว ระบบดึงค่าที่แก้มาให้เฉพาะเมื่อค่าในไฟล์ยังเป็นค่าเดิม</li>
-        <li>กดปุ่ม <b>ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS</b> จะได้ไฟล์ที่ import เข้ามา หน้าตาและคอลัมน์เหมือนเดิมทุกอย่าง เปลี่ยนเฉพาะช่อง TUMBOL, AUMPHER, PROVICE, ZIPCODE ของออเดอร์ที่แก้ (ทุกบรรทัดของออเดอร์นั้น) ชื่อไฟล์ลงท้าย "_แก้เขต" เอาไปอัปโหลดเข้า TMS ได้เลย</li>
+        <li>กดปุ่ม <b>ดาวน์โหลดไฟล์ ▾</b> เลือกได้ 3 แบบ ทุกแบบมีคอลัมน์เหมือนไฟล์ที่ import เข้ามา
+          <ul class="plain" style="margin-top:4px">
+            <li><b>ไฟล์แก้เขตสำหรับ TMS (เฉพาะที่แก้)</b> — เฉพาะออเดอร์ที่มีป้าย "แก้แล้ว" ทุกบรรทัดของออเดอร์นั้น ช่อง TUMBOL, AUMPHER, PROVICE, ZIPCODE เป็นค่าใหม่ ชื่อไฟล์ลงท้าย "_แก้เขต_เฉพาะที่แก้"</li>
+            <li><b>ไฟล์ทั้งหมด (รวมที่แก้แล้ว)</b> — ทุกแถวของไฟล์ แถวที่แก้เป็นค่าใหม่ ชื่อไฟล์ลงท้าย "_แก้เขต_ทั้งหมด"</li>
+            <li><b>ไฟล์ต้นฉบับ</b> — ไฟล์ที่อัปโหลดเข้ามา ไม่แก้อะไร ชื่อเดิม</li>
+          </ul></li>
         <li>ช่อง ADDRESS ไม่ถูกแก้</li>
       </ol>
     </div>
@@ -888,7 +901,7 @@ async function loadFixes(){
   }catch(e){}
 }
 function redraw(x){ const tr=document.querySelector(`#tbody tr[data-id="${CSS.escape(idOf(x))}"]`); if(tr) tr.outerHTML=row(x); }
-function updTms(){ const b=$('tmsBtn'); if(!b) return; b.textContent=`ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (${FIX.size})`; b.classList.toggle('hidden',!RES.length); }
+function updTms(){ const w=$('dlWrap'); if(!w) return; w.classList.toggle('hidden',!RES.length); $('dlFixedN').textContent=FIX.size?`${FIX.size.toLocaleString()} ออเดอร์ · ชื่อไฟล์ลงท้าย _แก้เขต_เฉพาะที่แก้`:'ยังไม่มีออเดอร์ที่แก้'; $('dlAllN').textContent=`ทุกแถว แก้แล้ว ${FIX.size.toLocaleString()} ออเดอร์ · ลงท้าย _แก้เขต_ทั้งหมด`; }
 function pickerHtml(x){
   const I=ix(), anc=AddrCheck.fixAnchor(x,I), pk=x._pick||{};
   let L=anc?AddrCheck.nearestAmps(I,anc.lng,anc.lat,40):[];
@@ -924,8 +937,12 @@ function fixCell(x){
   b.push(`<button type="button" class="btn ghost sm" data-act="pick">เลือกเขตเอง</button>`);
   return `<div class="fixbar">${b.join('')}</div>`+(x._pick?pickerHtml(x):'');
 }
-async function downloadTMS(){
-  if(!FIX.size){ toast('ยังไม่มีออเดอร์ที่แก้'); return; }
+function saveBytes(bytes,name){ const u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); const a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),5000); }
+async function downloadTMS(mode){
+  mode=mode||'all';
+  if(!ORIG){ toast('ยังไม่มีไฟล์'); return; }
+  if(mode==='orig'){ saveBytes(ORIG.bytes,ORIG.name||'report.xlsx'); toast('ดาวน์โหลดไฟล์ต้นฉบับแล้ว'); return; }
+  if(mode==='fixed'&&!FIX.size){ toast('ยังไม่มีออเดอร์ที่แก้'); return; }
   try{
     const wb=XLSX.read(ORIG.bytes,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]], rg=XLSX.utils.decode_range(ws['!ref']), E=XLSX.utils.encode_cell;
     let hr=rg.s.r; const col={};
@@ -940,12 +957,20 @@ async function downloadTMS(){
     }
     // line breaks: keep \n only (a bare \r would be written as the literal text "_x000d_")
     wb.SheetNames.forEach(n=>{ const sh=wb.Sheets[n]; Object.keys(sh).forEach(k=>{ if(k[0]==='!') return; const c=sh[k]; if(c&&c.t==='s'&&typeof c.v==='string'&&c.v.indexOf('\r')>=0){ c.v=c.v.replace(/\r\n?/g,'\n'); delete c.w; delete c.h; delete c.r; } }); });
+    if(mode==='fixed'){ // keep header + rows of fixed orders only (cells copied as they are)
+      const nw={}; let out=hr;
+      const copyRow=(r,to)=>{ for(let c=rg.s.c;c<=rg.e.c;c++){ const cl=ws[E({r,c})]; if(cl) nw[E({r:to,c})]=cl; } };
+      copyRow(hr,hr);
+      for(let r=hr+1;r<=rg.e.r;r++){ const id=val(r,col.ORDERID)||val(r,col.ORDERID_ORG); if(FIX.has(id)) copyRow(r,++out); }
+      nw['!ref']=XLSX.utils.encode_range({s:{r:rg.s.r,c:rg.s.c},e:{r:out,c:rg.e.c}}); if(ws['!cols']) nw['!cols']=ws['!cols'];
+      wb.Sheets[wb.SheetNames[0]]=nw;
+    }
     const base=(ORIG.name||'report').replace(/\.[^.]+$/,'');
-    XLSX.writeFile(wb,base+'_แก้เขต.xlsx');
-    toast(`ดาวน์โหลดแล้ว: แก้ ${ids.size} ออเดอร์ (${rows} แถว)`); logUse('ดาวน์โหลดไฟล์แก้เขต',{f:SRCNAME,o:ids.size});
+    XLSX.writeFile(wb,base+(mode==='fixed'?'_แก้เขต_เฉพาะที่แก้':'_แก้เขต_ทั้งหมด')+'.xlsx');
+    toast(mode==='fixed'?`ดาวน์โหลดแล้ว: เฉพาะที่แก้ ${ids.size} ออเดอร์ (${rows} แถว)`:`ดาวน์โหลดแล้ว: ทั้งไฟล์ แก้ ${ids.size} ออเดอร์ (${rows} แถว)`); logUse('ดาวน์โหลดไฟล์แก้เขต',{f:SRCNAME,o:ids.size});
   }catch(e){ toast('สร้างไฟล์ไม่ได้: '+e.message); }
 }
-function lockBtns(on){ [['xlsxBtn','ดาวน์โหลด Excel'],['copyBtn','คัดลอกผลไปวาง Excel'],['tmsBtn',null]].forEach(([id,t])=>{ const b=$(id); b.disabled=on; b.textContent=on?'รอ Google Maps…':(t||`ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (${FIX.size})`); b.title=on?'รอให้ตรวจกับ Google Maps เสร็จก่อน ไฟล์จะได้มีผลครบ':''; }); }
+function lockBtns(on){ [['xlsxBtn','ดาวน์โหลด Excel'],['copyBtn','คัดลอกผลไปวาง Excel'],['tmsBtn','ดาวน์โหลดไฟล์ ▾']].forEach(([id,t])=>{ const b=$(id); b.disabled=on; b.textContent=on?'รอ Google Maps…':t; b.title=on?'รอให้ตรวจกับ Google Maps เสร็จก่อน ไฟล์จะได้มีผลครบ':''; }); }
 const hhmm=()=>new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
 async function geoPass(){
   const box=$('geoInfo');
@@ -1146,7 +1171,10 @@ $('tol').onchange=()=>{if(RAW) run();};
 ['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
 function route(){ const how=location.hash==='#how'; $('pageCheck').classList.toggle('hidden',how); $('pageHow').classList.toggle('hidden',!how); $('tabHow').classList.toggle('on',how); $('tabCheck').classList.toggle('on',!how); $('copyBtn').style.visibility=$('xlsxBtn').style.visibility=how?'hidden':''; }
 window.addEventListener('hashchange',route); route(); logUse('เปิดหน้าเว็บ'); loadShared();
-$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX; $('tmsBtn').onclick=downloadTMS;
+$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX; $('tmsBtn').onclick=e=>{ e.stopPropagation(); const m=$('dlMenu'), open=m.classList.contains('hidden'); m.classList.toggle('hidden',!open); $('tmsBtn').setAttribute('aria-expanded',String(open)); };
+$('dlMenu').addEventListener('click',e=>{ const b=e.target.closest('[data-dl]'); if(!b) return; $('dlMenu').classList.add('hidden'); $('tmsBtn').setAttribute('aria-expanded','false'); downloadTMS(b.dataset.dl); });
+document.addEventListener('click',e=>{ if(!e.target.closest('#dlWrap')){ $('dlMenu').classList.add('hidden'); $('tmsBtn').setAttribute('aria-expanded','false'); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ $('dlMenu').classList.add('hidden'); $('tmsBtn').setAttribute('aria-expanded','false'); } });
 $('tbody').addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return; const tr=b.closest('tr[data-id]'); const x=tr&&BYID.get(tr.dataset.id); if(!x) return;
   const act=b.dataset.act, g=x.suggest, p=x.pin;
