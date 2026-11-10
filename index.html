@@ -173,6 +173,7 @@ tr.fixed td{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
     <div class="tiles" id="tiles"></div>
     <p class="muted" id="dropNote" style="margin:-8px 0 0;font-size:13px"></p>
     <div id="geoInfo" class="geobox hidden" aria-live="polite"></div>
+    <div id="pendInfo" class="geobox warn hidden" role="status"></div>
     <div class="two">
       <div class="card"><h2>แยกตามช่องทาง</h2><div id="byChannel"></div></div>
       <div class="card"><h2>เขตในระบบ → เขตที่ควรเป็น (พบบ่อย)</h2><div id="byPair"></div></div>
@@ -877,23 +878,32 @@ function quickTarget(x,a,p,tPref,zPref){ // one-click target; null → need the 
   const z=[zPref,x.r.ZIPCODE].map(v=>String(v||'')).find(v=>rec.zips.includes(v))||rec.zips[0]||'';
   return [rec.t,rec.a,rec.p,z];
 }
-function postJSON(o){ return fetch(LOG_URL,{method:'POST',body:JSON.stringify(o)}).then(r=>r.json()); }
+function fetchT(url,opt,ms){ const c=new AbortController(), t=setTimeout(()=>c.abort(),ms||90000); return fetch(url,Object.assign({},opt,{signal:c.signal})).finally(()=>clearTimeout(t)); }
+function postJSON(o,ms){ return fetchT(LOG_URL,{method:'POST',body:JSON.stringify(o)},ms).then(r=>r.json()); }
+// การแก้ที่ส่งลง Sheet ไม่สำเร็จ → เก็บไว้ลองใหม่ทุก 20 วินาที และเตือนก่อนปิดหน้า
+const PENDING=new Map(); let pendTimer=null;
+function pendShow(){ const e=$('pendInfo'); if(!e) return; e.classList.toggle('hidden',!PENDING.size); e.textContent=`⚠️ มี ${PENDING.size} การแก้ที่ยังบันทึกลง Sheet ไม่สำเร็จ ระบบกำลังลองใหม่อัตโนมัติ — อย่าเพิ่งปิดหน้านี้ หรือดาวน์โหลดไฟล์เก็บไว้ก่อน`; }
+function sendFix(key,body){
+  return postJSON(body,30000).then(r=>{ if(!r||!r.ok) throw 0; PENDING.delete(key); pendShow(); })
+    .catch(()=>{ PENDING.set(key,body); pendShow(); if(!pendTimer) pendTimer=setInterval(()=>{ if(!PENDING.size){ clearInterval(pendTimer); pendTimer=null; return; } [...PENDING].forEach(([k,b])=>sendFix(k,b)); },20000); });
+}
+window.addEventListener('beforeunload',e=>{ if(PENDING.size){ e.preventDefault(); e.returnValue=''; } });
 function setFix(x,to,how,opt){
   opt=opt||{};
   x.fix={to,from:opt.from||sysVals(x),how,at:opt.at||hhmm()}; x._pick=null; FIX.set(idOf(x),x.fix);
   redraw(x); summary(); updTms();
-  if(!opt.silent&&geoOn()) postJSON({a:'fix',o:idOf(x),from:x.fix.from,to,how,f:SRCNAME}).then(r=>{ if(!r||!r.ok) throw 0; }).catch(()=>toast('บันทึกลง Sheet ไม่สำเร็จ แต่แก้ในหน้านี้แล้ว — ดาวน์โหลดไฟล์ก่อนปิดหน้า'));
+  if(!opt.silent&&geoOn()) sendFix(idOf(x),{a:'fix',o:idOf(x),from:x.fix.from,to,how,f:SRCNAME});
   if(!opt.silent) toast(`แก้ ${idOf(x)} เป็นเขต ${to[1]} แล้ว`);
 }
 function clearFix(x){
   const f=x.fix; x.fix=null; FIX.delete(idOf(x)); redraw(x); summary(); updTms();
-  if(geoOn()&&f) postJSON({a:'unfix',o:idOf(x),from:f.from,to:f.to,f:SRCNAME}).catch(()=>toast('บันทึกการยกเลิกลง Sheet ไม่สำเร็จ'));
+  if(geoOn()&&f) sendFix(idOf(x),{a:'unfix',o:idOf(x),from:f.from,to:f.to,f:SRCNAME});
 }
 async function loadFixes(){
   if(!geoOn()) return;
   const ids=RES.filter(x=>x.lvl>0||x.unverifiable).map(idOf);
   try{
-    const r=await postJSON({a:'fixes',ids}); let n=0;
+    const r=await postJSON({a:'fixes',ids},45000); let n=0;
     RES.forEach(x=>{ const f=r&&r[idOf(x)]; if(!f||x.fix) return;
       const K=v=>String(v||'').replace(/\s+/g,''), sv=sysVals(x);
       if(f.from.every((v,i)=>K(v)===K(sv[i]))){ x.fix={to:f.to,from:f.from,how:f.how,at:f.at,saved:1}; FIX.set(idOf(x),x.fix); n++; } });
@@ -904,12 +914,15 @@ function redraw(x){ const tr=document.querySelector(`#tbody tr[data-id="${CSS.es
 function updTms(){ const w=$('dlWrap'); if(!w) return; w.classList.toggle('hidden',!RES.length); $('dlFixedN').textContent=FIX.size?`${FIX.size.toLocaleString()} ออเดอร์ · ชื่อไฟล์ลงท้าย _แก้เขต_เฉพาะที่แก้`:'ยังไม่มีออเดอร์ที่แก้'; $('dlAllN').textContent=`ทุกแถว แก้แล้ว ${FIX.size.toLocaleString()} ออเดอร์ · ลงท้าย _แก้เขต_ทั้งหมด`; }
 function pickerHtml(x){
   const I=ix(), anc=AddrCheck.fixAnchor(x,I), pk=x._pick||{};
-  let L=anc?AddrCheck.nearestAmps(I,anc.lng,anc.lat,40):[];
   const K=v=>String(v||'').replace(/\s+/g,'');
+  let L=anc?AddrCheck.nearestAmps(I,anc.lng,anc.lat,40):[];
+  if(!L.length){ const P=K(x.r.PROVICE), seen=new Set(); // ไม่มีจุดอ้างอิง → เขตทั้งหมดของจังหวัดในระบบ เรียงตามชื่อ
+    I.tamb.forEach(list=>list.forEach(r=>{ const k=r.a+'|'+r.p; if(K(r.p)===P&&!seen.has(k)){ seen.add(k); L.push({a:r.a,p:r.p,d:null}); } }));
+    L.sort((a,b)=>a.a.localeCompare(b.a,'th')); }
   if(pk.a&&!L.some(o=>K(o.a)===K(pk.a)&&K(o.p)===K(pk.p))) L.unshift({a:pk.a,p:pk.p,d:null});
   const selA=pk.a?L.find(o=>K(o.a)===K(pk.a)&&K(o.p)===K(pk.p)):L[0];
   const opts=L.map(o=>`<option value="${esc(o.a+'|'+o.p)}"${o===selA?' selected':''}>${esc(o.a)} · ${esc(o.p.replace('กรุงเทพมหานคร','กรุงเทพฯ'))}${o.d==null?'':o.d===0?' · อยู่ในเขตนี้':' · '+(o.d/1000).toFixed(1)+' กม.'}</option>`).join('');
-  return `<div class="pick" data-id="${esc(idOf(x))}"><div class="muted" style="font-size:12px">เขตเรียงตามระยะจาก${anc?esc(anc.from):'—'}</div>
+  return `<div class="pick" data-id="${esc(idOf(x))}"><div class="muted" style="font-size:12px">${anc?'เขตเรียงตามระยะจาก'+esc(anc.from):'เขตทั้งหมดใน '+esc(x.r.PROVICE||'—')+' เรียงตามชื่อ'}</div>
     <label>เขต/อำเภอ<select data-f="amp">${opts}</select></label>
     <label>แขวง/ตำบล<select data-f="tam">${selA?tamOpts(x,selA.a,selA.p,pk.t):''}</select></label>
     <label>รหัสไปรษณีย์<select data-f="zip"></select></label>
@@ -944,7 +957,7 @@ async function downloadTMS(mode){
   if(mode==='orig'){ saveBytes(ORIG.bytes,ORIG.name||'report.xlsx'); toast('ดาวน์โหลดไฟล์ต้นฉบับแล้ว'); return; }
   if(mode==='fixed'&&!FIX.size){ toast('ยังไม่มีออเดอร์ที่แก้'); return; }
   try{
-    const wb=XLSX.read(ORIG.bytes,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]], rg=XLSX.utils.decode_range(ws['!ref']), E=XLSX.utils.encode_cell;
+    const wb=XLSX.read(ORIG.bytes,{type:'array',cellNF:true}), ws=wb.Sheets[wb.SheetNames[0]], rg=XLSX.utils.decode_range(ws['!ref']), E=XLSX.utils.encode_cell;
     let hr=rg.s.r; const col={};
     for(let c=rg.s.c;c<=rg.e.c;c++){ const cl=ws[E({r:hr,c})]; if(cl) col[String(cl.v).trim()]=c; }
     const val=(r,c)=>{ if(c==null) return ''; const cl=ws[E({r,c})]; return cl?String(cl.w!=null?cl.w:cl.v).trim():''; };
@@ -995,7 +1008,7 @@ async function geoPass(){
     if(run!==GEO_RUN) return;
     const part=todo.slice(i,i+40), need=part.filter(o=>!GEO_MEM.has(o.k+'|'+o.q));
     if(need.length&&!quota){
-      try{ const r=await fetch(LOG_URL,{method:'POST',body:JSON.stringify({a:'geocode',q:need.map((o,j)=>[j,o.q,o.k,AddrCheck.provBox(I,o.x.r.PROVICE)])})}); const js=await r.json();
+      try{ const r=await fetchT(LOG_URL,{method:'POST',body:JSON.stringify({a:'geocode',q:need.map((o,j)=>[j,o.q,o.k,AddrCheck.provBox(I,o.x.r.PROVICE)])})},120000); const js=await r.json();
         js.forEach(([j,g])=>{ if(g.err==='quota') quota=true; if(!g.err){ if(!g.seen) g._at=hhmm(); GEO_MEM.set(need[j].k+'|'+need[j].q,g); need[j].fresh=true; } else need[j].gerr=g; }); }
       catch(e){ net=true; need.forEach(o=>o.gerr={err:'net'}); }
     }
@@ -1019,10 +1032,10 @@ function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');set
 function toB64(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
 function fromB64(b){ const s=atob(b), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
 function shareMsg(cls,html){ const e=$('shareInfo'); e.className='share '+cls; e.innerHTML=html; }
-async function sharedInfo(){ try{ const r=await postJSON({a:'current'}); return r&&r.name?r:null; }catch(e){ return null; } }
+async function sharedInfo(){ try{ const r=await postJSON({a:'current'},20000); return r&&r.name?r:null; }catch(e){ return null; } }
 async function shareUpload(bytes,name){
   shareMsg('run',`⏳ กำลังบันทึกไฟล์ <b>${esc(name)}</b> ให้ทีม …`);
-  try{ const r=await postJSON({a:'upload',name,b64:toB64(bytes)}); if(!r||!r.ok) throw 0;
+  try{ const r=await postJSON({a:'upload',name,b64:toB64(bytes)},180000); if(!r||!r.ok) throw 0;
     shareMsg('done',`✓ แชร์ไฟล์ <b>${esc(name)}</b> ให้ทีมแล้ว (อัปโหลดเมื่อ ${esc(r.at)}) ใครเปิดเว็บวันนี้จะเห็นไฟล์นี้ทันที ไม่ต้องอัปโหลดซ้ำ`); }
   catch(e){ shareMsg('warn','⚠️ แชร์ไฟล์ให้ทีมไม่สำเร็จ ไฟล์นี้อยู่แค่ในเครื่องนี้ ลองอัปโหลดใหม่อีกครั้ง'); }
 }
@@ -1030,7 +1043,7 @@ async function loadShared(){
   if(!geoOn()||RAW) return;
   const cur=await sharedInfo(); if(!cur||RAW) return;
   shareMsg('run',`⏳ กำลังเปิดไฟล์ของวันนี้ <b>${esc(cur.name)}</b> (อัปโหลดเมื่อ ${esc(cur.at)}) …`);
-  try{ const r=await postJSON({a:'getfile'}); if(!r||!r.b64) throw 0; if(RAW) return;
+  try{ const r=await postJSON({a:'getfile'},180000); if(!r||!r.b64) throw 0; if(RAW) return;
     processBytes(fromB64(r.b64),r.name,true);
     shareMsg('done',`📂 ไฟล์ของวันนี้จากทีม: <b>${esc(r.name)}</b> · อัปโหลดเมื่อ ${esc(r.at)} — ถ้ามีไฟล์ใหม่กว่า อัปโหลดเพื่อแทนได้เลย`); }
   catch(e){ shareMsg('warn','⚠️ เปิดไฟล์ของวันนี้ไม่สำเร็จ ลองรีเฟรชหน้า หรืออัปโหลดไฟล์เอง'); }
