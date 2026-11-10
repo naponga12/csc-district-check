@@ -7,7 +7,963 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+:root{<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจเขตออเดอร์ Marketplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
 :root{
+  /* layout: header + drop zone, summary row, two side panels (channel, district pairs), then the filterable order table */
+  --bg:#f4f6f8; --surface:#ffffff; --ink:#17212b; --muted:#5b6876; --line:#dde3e9;
+  --accent:#0b6e8a; --accent-ink:#ffffff;
+  --crit:#c2362b; --crit-bg:#fdecea; --warn:#a86400; --warn-bg:#fff3dc; --info:#4a5a6a; --info-bg:#eef2f5; --ok:#23784b; --ok-bg:#e6f4ec;
+  --font-body:"IBM Plex Sans Thai",system-ui,"Noto Sans Thai",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161b; --surface:#192129; --ink:#e7edf2; --muted:#9aa8b5; --line:#2b3540;
+  --accent:#4fb3cf; --accent-ink:#0b1a20;
+  --crit:#ff7b6e; --crit-bg:#3a1d1a; --warn:#f0b35a; --warn-bg:#382a14; --info:#b2c0cc; --info-bg:#222c35; --ok:#6fd39b; --ok-bg:#16301f;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#11161b; --surface:#192129; --ink:#e7edf2; --muted:#9aa8b5; --line:#2b3540;
+  --accent:#4fb3cf; --accent-ink:#0b1a20;
+  --crit:#ff7b6e; --crit-bg:#3a1d1a; --warn:#f0b35a; --warn-bg:#382a14; --info:#b2c0cc; --info-bg:#222c35; --ok:#6fd39b; --ok-bg:#16301f;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1360px;margin:0 auto;padding:20px 20px 60px;display:grid;gap:18px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-size:24px;margin:0;text-wrap:balance;font-weight:700}
+.sub{color:var(--muted);margin:2px 0 0;max-width:70ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--surface);transition:border-color .15s}
+.drop.over{border-color:var(--accent)}
+.drop p{margin:0}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:8px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--info);border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.tile .n{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .l{color:var(--muted);font-size:13px}
+.tile.c3{border-left-color:var(--crit)} .tile.c3 .n{color:var(--crit)}
+.tile.c2{border-left-color:var(--warn)} .tile.c2 .n{color:var(--warn)}
+.tile.c1{border-left-color:var(--info)}
+.tile.c0{border-left-color:var(--ok)} .tile.c0 .n{color:var(--ok)}
+.tile[aria-pressed="true"]{outline:2px solid var(--accent)}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+h2{font-size:16px;margin:0 0 10px}
+.mini{width:100%;border-collapse:collapse;font-size:14px}
+.mini th,.mini td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+.mini td.num,.mini th.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--crit);opacity:.8}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.controls input[type=search]{flex:1 1 220px;font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.controls select,.controls input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.controls label{color:var(--muted);font-size:13px;display:flex;gap:6px;align-items:center}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table.main{width:100%;border-collapse:collapse;font-size:14px;min-width:1100px}
+table.main th{position:sticky;top:0;background:var(--surface);text-align:left;font-weight:600;color:var(--muted);font-size:13px;padding:9px 10px;border-bottom:2px solid var(--line)}
+table.main td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.main tr.l3 td:first-child{box-shadow:inset 4px 0 0 var(--crit)}
+table.main tr.l2 td:first-child{box-shadow:inset 4px 0 0 var(--warn)}
+table.main tr.l1 td:first-child{box-shadow:inset 4px 0 0 var(--info)}
+.mono{font-family:var(--font-mono);font-size:12.5px;word-break:break-all}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.pna{background:transparent;color:var(--muted);border:1px dashed var(--muted)} .tile.cna{border-left-color:var(--muted);border-left-style:dashed}
+.p3{background:var(--crit-bg);color:var(--crit)} .p2{background:var(--warn-bg);color:var(--warn)} .p1{background:var(--info-bg);color:var(--info)} .p0{background:var(--ok-bg);color:var(--ok)}
+.av{font-size:13px;margin-bottom:4px;color:var(--muted)} .av.bad b{color:var(--crit)} .av.good b{color:var(--ok)}
+.iss{margin:0;padding-left:16px} .iss li{margin:2px 0}
+.iss li.i0{color:var(--muted)} .iss li.i3{color:var(--crit)} .iss li.i2{color:var(--warn)} .iss li.i1{color:var(--muted)}
+.sys b{font-weight:600}
+.sug{color:var(--ok);font-weight:500} .sug b{font-weight:700} .sug small{display:block;font-weight:400;color:var(--muted);margin-top:2px}
+.addr{max-width:380px;color:var(--ink)}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+.legend{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));font-size:14px}
+.legend div{display:flex;gap:8px;align-items:flex-start}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;color:var(--muted);font-size:13px}
+.hidden{display:none!important}
+.geobox{border:1px solid var(--line);border-left:5px solid var(--info);border-radius:10px;padding:10px 14px;background:var(--info-bg);font-size:14px;line-height:1.6}
+.geobox.run{border-left-color:var(--warn);background:var(--warn-bg)} .geobox.done{border-left-color:var(--ok);background:var(--ok-bg)} .geobox.warn{border-left-color:var(--crit);background:var(--crit-bg)}
+.gbar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden} .gbar i{display:block;height:100%;background:var(--warn);transition:width .3s}
+.btn:disabled{opacity:.55;cursor:wait}
+.tabs{display:flex;gap:4px;margin-top:10px;border-bottom:1px solid var(--line)}
+.tabs a{padding:6px 14px;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.how{max-width:980px} .hh{font-size:18px;margin:0 0 10px} .lead{margin:0;font-size:16px;line-height:1.8}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps li{display:grid;grid-template-columns:36px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.steps li.main{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.steps h3{margin:0 0 4px;font-size:15px} .steps p{margin:0 0 6px}
+.sn{width:30px;height:30px;font-size:13px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700}
+.ex{font-size:13px;background:var(--bg);border-radius:8px;padding:8px 10px;line-height:1.7} .ex s{color:var(--crit)}
+.exl{display:inline-block;min-width:92px;color:var(--muted);font-size:12px}
+.rule td,.rule th{vertical-align:top} .rule b.g{color:var(--ok)} .rule b.r{color:var(--crit)}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.exgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.exc{border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px} .exc p{margin:4px 0} .exh{margin-bottom:6px}
+.why{color:var(--muted);font-size:13px;border-top:1px dashed var(--line);padding-top:6px;margin-top:8px!important}
+.plain{margin:0;padding-left:20px;display:grid;gap:6px}
+.steps .plain li{display:list-item;border:0;padding:0;border-radius:0;background:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ตรวจเขตออเดอร์ Marketplace</h1>
+      <nav class="tabs" aria-label="หน้า"><a href="#check" id="tabCheck" class="on">ตรวจไฟล์</a><a href="#how" id="tabHow">ระบบทำงานอย่างไร</a></nav>
+      <p class="sub">อัปโหลดไฟล์ report_appointment ประจำวัน ระบบจะเทียบแขวง/เขตที่ช่องทางส่งมา กับที่อยู่ที่ลูกค้าพิมพ์เอง รหัสไปรษณีย์ และหมุดแผนที่ แล้วชี้ออเดอร์ที่เขตน่าจะผิด</p>
+    </div>
+    <div class="controls">
+      <button class="btn hidden" id="xlsxBtn" type="button">ดาวน์โหลด Excel</button>
+      <button class="btn ghost hidden" id="copyBtn" type="button">คัดลอกผลไปวาง Excel</button>
+    </div>
+  </header>
+
+  <div id="pageCheck" style="display:grid;gap:18px">
+  <div class="drop" id="drop">
+    <div>
+      <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
+      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณ ระบบส่งเฉพาะข้อความที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจ ไปตรวจกับ Google Maps (ตัดเบอร์โทรออก) และบันทึกวันเวลาที่ใช้กับจำนวนที่ตรวจ</p>
+      <p class="muted" id="refInfo" style="font-size:13px">กำลังโหลดข้อมูลแขวง/เขต …</p>
+    </div>
+    <div class="controls">
+      <label for="tol">ระยะหมุดที่ยอมให้เกินรอยต่อเขต (ม.)<input type="number" id="tol" value="800" min="0" step="100" style="width:90px"></label>
+      <label class="btn" for="file" style="color:var(--accent-ink)">เลือกไฟล์</label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+    </div>
+  </div>
+
+  <section id="intro" class="card">
+    <h2>ระบบตรวจอะไรบ้าง</h2>
+    <div class="legend">
+      <div><span class="pill p3">เขตผิด</span><span>ที่อยู่ที่ลูกค้าเขียน (เขต แขวง หรือจังหวัด) ไม่ตรงกับเขตในช่อง AUMPHER — มาจากการเทียบนี้อย่างเดียว</span></div>
+      <div><span class="pill p2">ควรตรวจ</span><span>ตัวเสริมพบข้อขัดแย้ง: แขวงกับเขตในระบบไม่เข้าคู่, หมุดส่งครั้งก่อนอยู่เขตอื่น, รหัสไปรษณีย์ไม่ตรง, ลูกค้าเขียนหลายเขต หรือลูกค้าคนเดียวได้เขตต่างกัน</span></div>
+      <div><span class="pill p1">ข้อมูลเพิ่ม</span><span>แขวงไม่ตรงแต่ยังเป็นเขตเดียวกัน, หมุดคลาดเคลื่อนแต่ที่อยู่ยืนยันเขตถูก, หมุดใกล้รอยต่อเขต</span></div>
+      <div><span class="pill pna">ตรวจไม่ได้</span><span>ที่อยู่ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ และไม่มีหมุด ต้องถามลูกค้าตอนโทรนัด</span></div>
+      <div><span class="pill p0">ปกติ</span><span>ที่อยู่ลูกค้าตรงกับ AUMPHER (ถือว่าถูกต้อง สิ่งที่ตัวเสริมเจอเป็นแค่หมายเหตุ) หรือมีข้อมูลให้ตรวจแต่ไม่พบข้อขัดแย้ง</span></div>
+      <div><span class="pill p1">หมายเหตุหมุด</span><span>หมุดคือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ อาจคลาดจากบ้านหรือเป็นที่อยู่เดิม จึงใช้เป็นหลักฐานรอง</span></div>
+    </div>
+  </section>
+
+  <section id="results" class="hidden" style="display:grid;gap:18px">
+    <div class="tiles" id="tiles"></div>
+    <p class="muted" id="dropNote" style="margin:-8px 0 0;font-size:13px"></p>
+    <div id="geoInfo" class="geobox hidden" aria-live="polite"></div>
+    <div class="two">
+      <div class="card"><h2>แยกตามช่องทาง</h2><div id="byChannel"></div></div>
+      <div class="card"><h2>เขตในระบบ → เขตที่ควรเป็น (พบบ่อย)</h2><div id="byPair"></div></div>
+    </div>
+    <div class="card" style="display:grid;gap:12px">
+      <div class="controls">
+        <input type="search" id="q" placeholder="ค้นหาเลขออเดอร์ ชื่อ เขต แขวง ที่อยู่…" aria-label="ค้นหา">
+        <label for="fLvl">ระดับ
+          <select id="fLvl"><option value="32">เขตผิด + ควรตรวจ</option><option value="3">เขตผิด</option><option value="2">ควรตรวจ</option><option value="1">ข้อมูลเพิ่ม</option><option value="na">ตรวจไม่ได้</option><option value="0">ปกติ</option><option value="all">ทั้งหมด</option></select>
+        </label>
+        <label for="fCh">ช่องทาง <select id="fCh"><option value="">ทั้งหมด</option></select></label>
+        <label for="fAmp">เขตในระบบ <select id="fAmp"><option value="">ทั้งหมด</option></select></label>
+      </div>
+      <div class="tablewrap">
+        <table class="main">
+          <thead><tr><th>ระดับ</th><th>ออเดอร์</th><th>ระบบส่งมา</th><th>ที่อยู่ที่ลูกค้าพิมพ์</th><th>สิ่งที่พบ</th><th>ที่ควรแก้เป็น</th><th>หมุดส่งครั้งก่อน</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager"><span id="count"></span><button class="btn ghost hidden" id="more" type="button">แสดงเพิ่ม</button></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:0" id="refNote">ข้อมูลอ้างอิงแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0), thai-province-data (MIT), ฐานข้อมูล jquery.Thailand.js — ใกล้รอยต่อเขตอาจคลาดเคลื่อนได้เล็กน้อย</p>
+  </section>
+  </div>
+  <section id="pageHow" class="hidden" style="display:grid;gap:18px">
+    <div class="card how">
+      <h2 class="hh">สรุปในหนึ่งประโยค</h2>
+      <p class="lead">ระบบอ่าน <b>ที่อยู่ที่ลูกค้าพิมพ์เอง</b> แล้วดูว่าเขตในนั้นตรงกับเขตที่ช่องทางส่งมาในช่อง <b>AUMPHER</b> ไหม ถ้าไม่ตรงคือ <span class="pill p3">เขตผิด</span> ถ้าลูกค้าไม่ได้เขียนเขต ระบบจะใช้หลักฐานเสริมช่วยดู และจะขึ้นได้สูงสุดแค่ <span class="pill p2">ควรตรวจ</span></p>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ขั้นตอนการตรวจ ทีละขั้น</h2>
+      <ol class="steps">
+        <li><div class="sn">0a</div><div><h3>กรองออเดอร์</h3><p>ตรวจเฉพาะ <b>COMPANY_ID 1247 และ 1230</b> รหัสอื่นจะไม่ถูกตรวจ แต่หน้าสรุปบอกจำนวนที่ตัดออก ออเดอร์ที่มีหลายบรรทัด (หลายสินค้า) จะนับเป็น 1 ออเดอร์</p></div></li>
+        <li><div class="sn">0b</div><div><h3>แยกที่อยู่ที่ลูกค้าพิมพ์เอง</h3><p>ช่อง ADDRESS มีชื่อแขวง เขต จังหวัดที่ระบบต่อท้ายไว้ ระบบตัดส่วนนั้นออกก่อน เพื่อให้เหลือเฉพาะสิ่งที่ลูกค้าพิมพ์จริง</p>
+          <div class="ex"><span class="exl">ADDRESS</span> 12/3 ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง กรุงเทพฯ 10310 <s>ห้วยขวาง ห้วยขวาง กรุงเทพมหานคร</s><br><span class="exl">ที่ลูกค้าพิมพ์</span> 12/3 ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง กรุงเทพฯ 10310</div></div></li>
+        <li class="main"><div class="sn">1</div><div><h3>ขั้นหลัก: ที่อยู่ลูกค้า เทียบกับ AUMPHER</h3><p>ระบบหาคำที่บอกพื้นที่ในที่อยู่ แล้วเทียบกับช่อง AUMPHER ผลมี 5 แบบ ซึ่งแสดงเป็นบรรทัดแรกของช่อง "สิ่งที่พบ"</p>
+          <table class="mini rule"><thead><tr><th>ผลเทียบ</th><th>หมายถึง</th><th>สถานะ</th></tr></thead><tbody>
+            <tr><td><b class="g">ตรง</b></td><td>ลูกค้าเขียนเขตเดียวกับ AUMPHER หรือเขียนแค่แขวงที่อยู่ในเขต AUMPHER</td><td><span class="pill p0">ปกติ</span> จบเลย</td></tr>
+            <tr><td><b class="r">ไม่ตรง</b></td><td>ลูกค้าเขียนเขต แขวง หรือจังหวัด ที่เป็นของที่อื่น</td><td><span class="pill p3">เขตผิด</span></td></tr>
+            <tr><td><b>ระบุหลายเขต</b></td><td>ในที่อยู่มีหลายเขต เช่น ที่อยู่บ้านกับที่ทำงาน</td><td><span class="pill p2">ควรตรวจ</span></td></tr>
+            <tr><td><b>ไม่ชัด</b></td><td>ชื่อแขวงที่เขียนมีอยู่หลายเขต เช่น แขวงบางมด (จอมทอง/ทุ่งครุ)</td><td><span class="pill p2">ควรตรวจ</span></td></tr>
+            <tr><td><b>ไม่ได้ระบุ</b></td><td>ลูกค้าไม่ได้เขียนเขตหรือแขวงเลย</td><td>ไปดูขั้น 2–4</td></tr>
+          </tbody></table>
+          <p class="note">ระบบอ่านได้ทั้งแบบไทย (แขวง ตำบล ต. เขต อำเภอ อ. จังหวัด จ.) ภาษาอังกฤษ (Khet, Khwaeng, District, Subdistrict) แบบ Lazada "ราชเทวี/ Ratchathewi" และคำที่สะกดผิดเล็กน้อย เช่น เขตุดินแดง ส่วนชื่อที่ไม่มีคำนำหน้า เช่น เขียนแค่ "ลาดพร้าว" จะไม่อ่าน เพราะอาจเป็นชื่อถนนหรือซอย</p></div></li>
+        <li><div class="sn">2</div><div><h3>ตัวเสริม: ข้อมูลในระบบเข้าคู่กันไหม</h3><p>ดูว่าแขวงในช่อง TUMBOL อยู่ในเขต AUMPHER จริงไหม และรหัสไปรษณีย์เป็นของเขตนั้นไหม ถ้าไม่เข้าคู่ขึ้นได้สูงสุด <span class="pill p2">ควรตรวจ</span></p></div></li>
+        <li><div class="sn">3</div><div><h3>ตัวเสริม: หมุดส่งครั้งก่อน</h3><p>LatLng คือจุดที่คนรถปิดงานครั้งก่อนของลูกค้ารายนี้ จึงอาจคลาดจากบ้าน หรือเป็นที่อยู่เดิม ถ้าหมุดอยู่เขตอื่นเกิน 800 ม. ขึ้น <span class="pill p2">ควรตรวจ</span> ถ้าห่างไม่เกิน 800 ม. ถือว่าอยู่แถวรอยต่อเขต ไม่นับ ลูกค้าใหม่จะไม่มีหมุด</p></div></li>
+        <li><div class="sn">3b</div><div><h3>ตัวเสริม: Google Maps</h3><p>หลังตรวจเสร็จ ระบบส่งข้อความที่อยู่ของออเดอร์ที่ขึ้น <span class="pill pna">ตรวจไม่ได้</span> และ <span class="pill p2">ควรตรวจ</span> ไปหาตำแหน่งใน Google Maps (ตัดเบอร์โทรออก) แล้วดูว่าตำแหน่งนั้นอยู่เขตไหน ใช้เฉพาะผลที่ Google หาเจอระดับอาคารหรือบ้านเลขที่ ผลแบบคร่าว ๆ เช่น กลางถนนหรือกลางเขต จะไม่นำมาใช้</p>
+          <p style="margin:8px 0 4px"><b>ข้อมูลที่ส่งไป Google</b> — ส่งเฉพาะข้อความที่ลูกค้าพิมพ์เอง แล้วเติมจังหวัดท้ายข้อความ</p>
+          <table class="mini rule"><thead><tr><th>ขั้น</th><th>ทำอะไร</th><th>ตัวอย่าง</th></tr></thead><tbody>
+            <tr><td>1</td><td>เอาข้อความจากช่อง ADDRESS</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 โทร 08x-xxx-xxxx <s>บางซื่อ บางซื่อ กรุงเทพมหานคร</s></td></tr>
+            <tr><td>2</td><td>ตัดแขวง/เขต/จังหวัดที่ระบบต่อท้ายไว้ออก (แบบเดียวกับขั้น 0b)</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 โทร 08x-xxx-xxxx</td></tr>
+            <tr><td>3</td><td>ตัดเบอร์โทรออก</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11</td></tr>
+            <tr><td>4</td><td>เติมจังหวัดจากช่อง PROVICE (ถ้าลูกค้ายังไม่ได้เขียน) และบอก Google ให้หาในกรอบจังหวัดนั้นก่อน เพื่อไม่ให้ไปเจอที่จังหวัดอื่น</td><td>หอพักแห่งหนึ่ง ห้อง 5xx ซอยวงศ์สว่าง 11 <b>กรุงเทพมหานคร</b></td></tr>
+          </tbody></table>
+          <p class="note"><b>ตั้งใจไม่ส่ง TUMBOL, AUMPHER และ ZIPCODE ของระบบ</b> เพราะช่องพวกนี้คือสิ่งที่เรากำลังตรวจว่าผิดหรือเปล่า ถ้าส่งไปด้วย Google จะหาตำแหน่งตามคำตอบของระบบ แล้วผลจะออกมาว่า "ตรง" เสมอ การตรวจก็ไม่มีความหมาย ส่วนชื่อที่ลูกค้าพิมพ์ปนไว้ในช่องที่อยู่ ระบบตัดออกไม่ได้ จะถูกส่งไปด้วย</p>
+          <p style="margin:10px 0 4px"><b>Google ส่งอะไรกลับมา และระบบใช้อย่างไร</b></p>
+          <ol class="plain">
+            <li>Google ส่งพิกัด (ละติจูด/ลองจิจูด) ชื่อสถานที่ และระดับความแม่นกลับมา</li>
+            <li>ใช้เฉพาะผลที่แม่นระดับอาคารหรือบ้านเลขที่ ถ้า Google จับคู่ได้แค่บางส่วน ต้องแม่นระดับอาคารเท่านั้นจึงจะใช้ ผลแบบกลางถนน กลางหมู่บ้าน หรือกลางเขต จะไม่ใช้</li>
+            <li>ถ้าพิกัดอยู่ต่างจังหวัดกับในระบบ ถือว่า Google น่าจะเจอสถานที่อื่นที่ชื่อคล้ายกัน ไม่นำมาใช้</li>
+            <li>ดูว่าพิกัดตกอยู่ในเขตไหน โดยใช้ขอบเขตเขตชุดเดียวกับที่ตรวจหมุด แล้วเทียบกับ AUMPHER</li>
+          </ol>
+          <table class="mini rule"><thead><tr><th>Google Maps เจอที่</th><th>ผล</th></tr></thead><tbody>
+            <tr><td>เขตเดียวกับ AUMPHER (หรือห่างไม่เกิน 800 ม.)</td><td>ตรวจไม่ได้ → <span class="pill p0">ปกติ</span> · ควรตรวจ ยังคงเป็นควรตรวจ</td></tr>
+            <tr><td>เขตอื่น</td><td><span class="pill p2">ควรตรวจ</span> และแนะนำเขตตาม Google (ถ้า Google จับคู่ได้บางส่วน จะมีหมายเหตุว่าอาจเป็นสถานที่อื่น)</td></tr>
+            <tr><td>หาไม่เจอ / ไม่ละเอียดพอ / เจอต่างจังหวัด</td><td>สถานะเดิม</td></tr>
+          </tbody></table>
+          <p style="margin:10px 0 4px"><b>กันตรวจซ้ำในวันเดียวกัน</b></p>
+          <ul class="plain">
+            <li>ระบบจดว่าวันนี้ออเดอร์ไหนตรวจกับ Google ไปแล้ว (จด ORDERID เวลา และผล ในแท็บ "ผล Google วันนี้" ของ Sheet บันทึกการใช้งาน ไม่จดข้อความที่อยู่)</li>
+            <li>ถ้าเปิดไฟล์ที่มีออเดอร์เดิมซ้ำในวันเดียวกัน ไม่ว่าคนเดิมหรือคนอื่น ระบบใช้ผลเดิม ไม่ส่งไป Google อีก และขึ้นว่า "Google Maps (ตรวจไปแล้ววันนี้ 09:14 ใช้ผลเดิม)"</li>
+            <li>ถ้าทีมแก้ข้อความที่อยู่ของออเดอร์นั้นแล้ว ระบบจะตรวจใหม่ เพราะที่อยู่เปลี่ยน</li>
+            <li>เริ่มนับวันใหม่ตอนเที่ยงคืน ข้อมูลของวันก่อนถูกลบอัตโนมัติ</li>
+          </ul>
+          <p class="note">ใช้ได้วันละประมาณ 1,000 ที่อยู่ (โควตาฟรีของ Google) ระหว่างตรวจจะมีกล่องแสดงความคืบหน้า และปุ่มดาวน์โหลด Excel กับปุ่มคัดลอกจะกดไม่ได้จนกว่าจะตรวจเสร็จ เพื่อให้ไฟล์มีผลจาก Google ครบ</p></div></li>
+        <li><div class="sn">4</div><div><h3>ตัวเสริม: ลูกค้าคนเดียวกัน</h3><p>ถ้าเบอร์โทรและที่อยู่เหมือนกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ ขึ้น <span class="pill p2">ควรตรวจ</span></p></div></li>
+        <li><div class="sn">✓</div><div><h3>สรุปสถานะ</h3><p>ใช้สถานะที่หนักที่สุดที่เจอ ถ้าไม่เจออะไรและไม่มีอะไรให้ตรวจเลย (ไม่มีเขต แขวง รหัสไปรษณีย์ในที่อยู่ และไม่มีหมุด) จะขึ้น <span class="pill pna">ตรวจไม่ได้</span></p></div></li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">5 สถานะ และสิ่งที่ต้องทำ</h2>
+      <table class="mini rule"><thead><tr><th>สถานะ</th><th>มาจาก</th><th>ต้องทำ</th><th>ก่อนจัดรอบ</th></tr></thead><tbody>
+        <tr><td><span class="pill p3">เขตผิด</span></td><td>ที่อยู่ลูกค้าบอกเขตอื่น (ขั้น 1 เท่านั้น)</td><td>แก้เขตในระบบตามช่อง "ที่ควรแก้เป็น" ถ้ามั่นใจปานกลาง อ่านที่อยู่ก่อน</td><td>ต้องแก้</td></tr>
+        <tr><td><span class="pill p2">ควรตรวจ</span></td><td>หลายเขต / ชื่อแขวงซ้ำ / ตัวเสริมหรือ Google Maps เจอข้อขัดแย้ง</td><td>เปิดหมุดดู หรือถามลูกค้าตอนโทรนัด</td><td>ต้องเคลียร์</td></tr>
+        <tr><td><span class="pill pna">ตรวจไม่ได้</span></td><td>ไม่มีข้อมูลให้ตรวจเลย</td><td>ถามเขตจากลูกค้าตอนโทรนัด</td><td>ควรเก็บให้ครบ</td></tr>
+        <tr><td><span class="pill p1">ข้อมูลเพิ่ม</span></td><td>ลูกค้าไม่ได้เขียนเขต แต่ตัวเสริมเจอเรื่องเล็ก เช่น หมุดใกล้รอยต่อ</td><td>ไม่ต้องทำ</td><td>ไม่ต้อง</td></tr>
+        <tr><td><span class="pill p0">ปกติ</span></td><td>ที่อยู่ตรงกับ AUMPHER หรือไม่พบข้อขัดแย้ง</td><td>ไม่ต้องทำ (แขวงไม่ตรงไม่นับ)</td><td>ไม่ต้อง</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ตัวอย่าง</h2>
+      <p class="muted" style="margin:0 0 10px">ที่อยู่ดัดแปลงจากไฟล์จริง ตัดชื่อและบ้านเลขที่ออก</p>
+      <div class="exgrid">
+        <div class="exc"><div class="exh"><span class="pill p3">เขตผิด</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 87 แขวงคลองเจ้าคุณสิงห์ <b>เขตวังทองหลาง</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง</p><p class="why">ลูกค้าเขียนเขตวังทองหลาง ไม่ตรงกับห้วยขวาง หมุดครั้งก่อนก็อยู่วังทองหลาง → แนะนำแขวงคลองเจ้าคุณสิงห์ เขตวังทองหลาง 10310 มั่นใจสูง</p></div>
+        <div class="exc"><div class="exh"><span class="pill p3">เขตผิด</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.อ่อนนุช แขวง<b>สวนหลวง</b></p><p><span class="exl">AUMPHER</span> ประเวศ</p><p class="why">ไม่ได้เขียนเขต แต่แขวงสวนหลวงอยู่เขตสวนหลวงเขตเดียว จึงรู้ว่าไม่ตรงกับประเวศ</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 1, Khwaeng Chom Phon, <b>Khet Chatuchak</b></p><p><span class="exl">AUMPHER</span> จตุจักร · TUMBOL ลาดยาว</p><p class="why">อ่านภาษาอังกฤษได้ว่าเขตจตุจักร ตรงกับ AUMPHER ส่วนแขวงไม่ตรง (จอมพล vs ลาดยาว) ไม่นับ</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> คอนโดพระราม 9 <b>แขวงห้วยขวาง เขตบางกะปิ</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง · TUMBOL บางกะปิ</p><p class="why">ลูกค้าเขียนแขวงกับเขตสลับกัน สลับกลับแล้วตรงกับระบบพอดี จึงถือว่าระบบถูก</p></div>
+        <div class="exc"><div class="exh"><span class="pill p0">ปกติ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ถนนเทียมร่วมมิตร แขวงหัวยขวาง <b>เขตหัวยขวาง</b></p><p><span class="exl">AUMPHER</span> ห้วยขวาง</p><p class="why">สะกดผิด (หัวย) ระบบอ่านแบบใกล้เคียงได้ว่าห้วยขวาง และแสดงหมายเหตุว่าอ่านแบบใกล้เคียง</p></div>
+        <div class="exc"><div class="exh"><span class="pill p2">ควรตรวจ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> ซ.ลาดพร้าว 47 <b>เขตลาดพร้าว</b> แขวงสะพานสอง <b>เขตวังทองหลาง</b></p><p><span class="exl">AUMPHER</span> วังทองหลาง</p><p class="why">มีสองเขตในที่อยู่เดียว ระบบไม่เดา ให้ถามลูกค้าว่าส่งที่ไหน</p></div>
+        <div class="exc"><div class="exh"><span class="pill p2">ควรตรวจ</span></div><p><span class="exl">ลูกค้าพิมพ์</span> รีเจ้นท์ รัชดา, อินทามระ 49</p><p><span class="exl">AUMPHER</span> ดินแดง · หมุดครั้งก่อนอยู่จตุจักร ห่าง 4 กม.</p><p class="why">ไม่ได้เขียนเขต จึงดูตัวเสริม หมุดอยู่เขตอื่นเกิน 800 ม. แต่หมุดอาจคลาด จึงขึ้นแค่ควรตรวจ</p></div>
+        <div class="exc"><div class="exh"><span class="pill pna">ตรวจไม่ได้</span></div><p><span class="exl">ลูกค้าพิมพ์</span> คอนโด Artisan Ratchada ตึก A ถนนเทียมร่วมมิตร</p><p><span class="exl">AUMPHER</span> ห้วยขวาง · ไม่มีหมุด</p><p class="why">ไม่มีเขต แขวง รหัสไปรษณีย์ และไม่มีหมุด ระบบตรวจไม่ได้ ต้องถามลูกค้า</p></div>
+      </div>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ช่อง "ที่ควรแก้เป็น" มาจากไหน</h2>
+      <ol class="plain">
+        <li><b>เขต:</b> เลือกเขตที่มีหลักฐานชี้มากที่สุด เช่น เขตที่ลูกค้าเขียน แขวงที่ลูกค้าเขียน หมุดครั้งก่อน และรหัสไปรษณีย์</li>
+        <li><b>แขวง:</b> ใช้แขวงที่ลูกค้าเขียน ถ้าแขวงนั้นอยู่ในเขตที่แนะนำ</li>
+        <li><b>รหัสไปรษณีย์:</b> ใช้ของแขวงนั้น ถ้าลูกค้าเขียนรหัสที่ตรงกับแขวง จะใช้รหัสที่ลูกค้าเขียน</li>
+        <li><b>ความมั่นใจ:</b> <b>สูง</b> = มีหลักฐานอย่างน้อย 2 แหล่งชี้เขตเดียวกัน <b>ปานกลาง</b> = มีแหล่งเดียว ควรอ่านที่อยู่ก่อนแก้</li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ข้อจำกัดที่ควรรู้</h2>
+      <ul class="plain">
+        <li>ตรวจระดับ <b>เขต</b> เท่านั้น แขวงไม่ตรงไม่มีผลกับสถานะ</li>
+        <li>ถ้าลูกค้าเขียนเขตผิดเอง ระบบจะเชื่อที่ลูกค้าเขียน จึงควรดูความมั่นใจประกอบ</li>
+        <li>หมุดคือจุดปิดงานครั้งก่อน ลูกค้าที่ย้ายบ้านหรือลูกค้าใหม่ หมุดจะไม่ช่วย</li>
+        <li>ชื่อพื้นที่ที่ไม่มีคำนำหน้าจะไม่ถูกอ่าน ยกเว้นแบบ "ไทย/ English" ของ Lazada</li>
+        <li>ข้อมูลแขวง/เขต/รหัสไปรษณีย์ และขอบเขตอำเภอ มาจาก thai-province-data, jquery.Thailand.js และ OpenGISData-Thailand ใกล้รอยต่อเขตอาจคลาดได้เล็กน้อย</li>
+        <li>Google Maps อ่านที่อยู่ไทยได้ไม่ทุกแบบ ที่อยู่ที่มีแค่ชื่อถนนยาวหรือชื่อหมู่บ้านทั่วไปมักหาไม่เจอแบบละเอียด และ Google ไม่ได้ทำให้ขึ้นเขตผิด</li>
+        <li>ไฟล์ Excel ถูกอ่านในเบราว์เซอร์ของผู้ใช้ ข้อความที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจถูกส่งไป Google Maps ระบบบันทึกการใช้งานแค่วันเวลา การกระทำ (เปิดหน้า ตรวจไฟล์ ดาวน์โหลด คัดลอก) ชื่อไฟล์ และจำนวนออเดอร์แต่ละสถานะ ไม่มีที่อยู่หรือข้อมูลลูกค้า</li>
+      </ul>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>// Loads reference data from pinned public GitHub sources (via jsDelivr, fallback raw.githubusercontent)
+(function (root) {
+  const SRC = {
+    kvSub: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/sub_district.json'],
+    kvDist: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/district.json'],
+    kvProv: ['kongvut/thai-province-data', '07319ed40eb3440c9a1b17cc48fa223340ddce55', 'api/latest/province.json'],
+    ec: ['earthchie/jquery.Thailand.js', '2f2737e560acc88e6bf1144e8fad3355a72d977d', 'jquery.Thailand.js/database/raw_database/raw_database.json'],
+    geo: ['chingchai/OpenGISData-Thailand', 'fafcea179cda88b689f5697c3866a449e79cd298', 'districts.geojson'],
+  };
+  const urls = ([repo, sha, path]) => [
+    `https://cdn.jsdelivr.net/gh/${repo}@${sha}/${path}`,
+    `https://raw.githubusercontent.com/${repo}/${sha}/${path}`,
+  ];
+  async function getJSON(src, fetchFn) {
+    let err;
+    for (const u of urls(src)) {
+      try { const r = await fetchFn(u); if (r.ok) return await r.json(); err = new Error(r.status + ' ' + u); }
+      catch (e) { err = e; }
+    }
+    throw err;
+  }
+  function build(kvSub, kvDist, kvProv, ec, geo) {
+    const Z = new Map();
+    const EN = new Map();
+    const put = (t, a, p, z, te, ae) => { const k = t + '\u0001' + a + '\u0001' + p; if (!Z.has(k)) Z.set(k, new Set()); if (z) Z.get(k).add(String(z)); if (te || ae) EN.set(k, [te || '', ae || '']); };
+    ec.forEach(r => put(r.district, r.amphoe, r.province, r.zipcode));
+    const prov = new Map(kvProv.map(p => [p.id, p.name.th]));
+    const dist = new Map(kvDist.filter(d => !d.deleted_at).map(d => [d.id, { a: d.name.th, ae: d.name.en, p: prov.get(d.province_id) }]));
+    kvSub.forEach(s => { if (s.deleted_at) return; const d = dist.get(s.district_id); if (d && d.p) put(s.name.th, d.a, d.p, s.zip_code, s.name.en, d.ae); });
+    const REF_T = [...Z].map(([k, z]) => { const [t, a, p] = k.split('\u0001'); const en = EN.get(k) || ['', '']; return [t, a, p, [...z].sort().join(' '), en[0], en[1]]; });
+    const REF_POLY = geo.features.map(f => {
+      const g = f.geometry, pr = f.properties;
+      return [pr.amp_th, pr.pro_th, g.type === 'Polygon' ? [g.coordinates] : g.coordinates];
+    });
+    return { REF_T, REF_POLY };
+  }
+  async function loadRefs(fetchFn, onProgress) {
+    fetchFn = fetchFn || ((u) => fetch(u));
+    const keys = Object.keys(SRC); let done = 0;
+    const got = await Promise.all(keys.map(k => getJSON(SRC[k], fetchFn).then(v => { done++; onProgress && onProgress(done, keys.length); return v; })));
+    const o = Object.fromEntries(keys.map((k, i) => [k, got[i]]));
+    return build(o.kvSub, o.kvDist, o.kvProv, o.ec, o.geo);
+  }
+  root.RefLoader = { loadRefs, build, SRC };
+  if (typeof module !== 'undefined') module.exports = root.RefLoader;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Address/district checker — shared by the web page and node tests.
+// REF_T: [[tambon, amphoe, province, "zip zip"], ...]
+// REF_POLY: [[amphoe, province, [polygon[ring[[lng,lat],...]]]], ...]
+(function (root) {
+  const BKK = 'กรุงเทพมหานคร';
+  const norm = s => (s == null ? '' : String(s))
+    .replace(/เเ/g, 'แ').replace(/ํา/g, 'ำ').replace(/​/g, '')
+    .replace(/[\s ]+/g, ' ').trim();
+  const key = s => norm(s).replace(/\s/g, '');
+  const enKey = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+  function lev(a, b, max) { // small Levenshtein with early exit
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i]; let best = i;
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  const PROV_ALIAS = { 'กรุงเทพ': BKK, 'กทม': BKK, 'กทม.': BKK, 'กรุงเทพฯ': BKK, 'กรุงเทพมหานครฯ': BKK };
+
+  function buildIndex(REF_T, REF_POLY) {
+    const ix = {
+      triple: new Map(), tamb: new Map(), amp: new Map(), ampZips: new Map(),
+      zipAmp: new Map(), prov: new Set(), poly: new Map(), polys: [],
+    };
+    ix.enTamb = new Map(); ix.enAmp = new Map(); ix.ampEn = new Map(); ix.tambEn = new Map();
+    const addEn = (m, k, v) => { if (!k || k.length < 3) return; if (!m.has(k)) m.set(k, new Set()); m.get(k).add(v); };
+    for (const [t, a, p, z, te, ae] of REF_T) {
+      const zips = z ? z.split(' ') : [];
+      addEn(ix.enTamb, enKey(te), key(t)); addEn(ix.enAmp, enKey(ae), key(a));
+      addEn(ix.tambEn, key(t), enKey(te)); addEn(ix.ampEn, key(a), enKey(ae));
+      const tk = key(t), ak = key(a), pk = key(p);
+      ix.triple.set(tk + '|' + ak + '|' + pk, zips);
+      if (!ix.tamb.has(tk)) ix.tamb.set(tk, []);
+      ix.tamb.get(tk).push({ t, a, p, zips });
+      if (!ix.amp.has(ak)) ix.amp.set(ak, new Set());
+      ix.amp.get(ak).add(p);
+      const apk = ak + '|' + pk;
+      if (!ix.ampZips.has(apk)) ix.ampZips.set(apk, new Set());
+      zips.forEach(zz => {
+        ix.ampZips.get(apk).add(zz);
+        if (!ix.zipAmp.has(zz)) ix.zipAmp.set(zz, new Map());
+        ix.zipAmp.get(zz).set(apk, { a, p });
+      });
+      ix.prov.add(p);
+    }
+    ix.tambNames = [...ix.tamb.keys()].filter(n => n.length >= 2).sort((x, y) => y.length - x.length);
+    ix.ampNames = [...ix.amp.keys()].sort((x, y) => y.length - x.length);
+    ix.enTambNames = [...ix.enTamb.keys()].sort((x, y) => y.length - x.length);
+    ix.enAmpNames = [...ix.enAmp.keys()].sort((x, y) => y.length - x.length);
+    ix.provNames = [...ix.prov].map(key).concat(Object.keys(PROV_ALIAS)).sort((x, y) => y.length - x.length);
+    for (const [a, p, polys] of REF_POLY) {
+      const bbox = [180, 90, -180, -90];
+      polys.forEach(poly => poly[0].forEach(([x, y]) => {
+        if (x < bbox[0]) bbox[0] = x; if (y < bbox[1]) bbox[1] = y;
+        if (x > bbox[2]) bbox[2] = x; if (y > bbox[3]) bbox[3] = y;
+      }));
+      const rec = { a, p, polys, bbox };
+      ix.poly.set(key(a) + '|' + key(p), rec);
+      ix.polys.push(rec);
+    }
+    return ix;
+  }
+
+  // ---------- geometry ----------
+  function inRing(x, y, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function inRec(x, y, rec) {
+    const b = rec.bbox;
+    if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) return false;
+    return rec.polys.some(poly => inRing(x, y, poly[0]) && !poly.slice(1).some(h => inRing(x, y, h)));
+  }
+  function distToRecM(x, y, rec) { // approx metres to boundary
+    const kx = 111320 * Math.cos(y * Math.PI / 180), ky = 110540;
+    let best = Infinity;
+    rec.polys.forEach(poly => poly.forEach(ring => {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const ax = (ring[j][0] - x) * kx, ay = (ring[j][1] - y) * ky;
+        const bx = (ring[i][0] - x) * kx, by = (ring[i][1] - y) * ky;
+        const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+        let t = L ? -(ax * dx + ay * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+        const px = ax + t * dx, py = ay + t * dy, d = Math.sqrt(px * px + py * py);
+        if (d < best) best = d;
+      }
+    }));
+    return best;
+  }
+
+  // ---------- text extraction ----------
+  const RX_T = /(แขวง|ตำบล|ต\.)[\s.]*/g;
+  const RX_A = /(เขต|อำเภอ|อ\.)[\s.]*/g;
+  const RX_P = /(จังหวัด|จ\.)[\s.]*/g;
+  function matchAt(text, pos, names) {
+    const rest = text.slice(pos).replace(/\s/g, '');
+    for (const n of names) if (rest.startsWith(n)) return n;
+    return null;
+  }
+  function fuzzyAt(text, pos, names) {
+    const rest = text.slice(pos).replace(/\s/g, '');
+    let best = null, bestD = 99, tie = false;
+    for (const n of names) {
+      if (n.length < 4) continue;
+      const max = n.length >= 8 ? 2 : 1;
+      for (const L of [n.length - 1, n.length, n.length + 1]) {
+        if (L < 3 || L > rest.length) continue;
+        const d = lev(rest.slice(0, L), n, max);
+        if (d <= max && d > 0) { if (d < bestD) { best = n; bestD = d; tie = false; } else if (d === bestD && n !== best) tie = true; }
+      }
+    }
+    return best && !tie ? best : null;
+  }
+  function findPrefixed(text, rx, names, fuzzyNames) {
+    const out = []; rx.lastIndex = 0; let m;
+    while ((m = rx.exec(text))) {
+      const at = m.index + m[0].length;
+      const n = matchAt(text, at, names);
+      if (n) out.push({ name: n, raw: m[0] + n });
+      else if (fuzzyNames && fuzzyNames.length) { const f = fuzzyAt(text, at, fuzzyNames); if (f) out.push({ name: f, raw: m[0] + f, fuzzy: true }); }
+    }
+    return out;
+  }
+  // English: "Khet Chatuchak", "Bang Kapi District", "Khwaeng Chom Phon", "Lat Yao Subdistrict"
+  const RX_EN_A1 = /\b(?:khet|amphoe|amphur|amphure)\b[\s.:]*/gi, RX_EN_T1 = /\b(?:khwaeng|kwaeng|tambon|tambol)\b[\s.:]*/gi;
+  function enAfter(text, rx, names, map) {
+    const out = []; rx.lastIndex = 0; let m;
+    while ((m = rx.exec(text))) {
+      const rest = enKey(text.slice(m.index + m[0].length, m.index + m[0].length + 40));
+      const n = names.find(x => rest.startsWith(x)); if (n) map.get(n).forEach(v => out.push(v));
+    }
+    return out;
+  }
+  function enBefore(text, rx, names, map) {
+    const out = []; let m; rx.lastIndex = 0;
+    while ((m = rx.exec(text))) {
+      const before = enKey(text.slice(Math.max(0, m.index - 40), m.index));
+      const n = names.find(x => before.endsWith(x)); if (n) map.get(n).forEach(v => out.push(v));
+    }
+    return out;
+  }
+  // Lazada style "ราชเทวี/ Ratchathewi": Thai word confirmed by its own English name
+  function slashPairs(text, ix) {
+    const A = [], T = []; const rx = /([\u0E00-\u0E7F]+)\s*\/\s*([A-Za-z][A-Za-z \-']{2,40})/g; let m;
+    while ((m = rx.exec(text))) {
+      const th = key(m[1]), en = enKey(m[2]);
+      if ((ix.ampEn.get(th) || new Set()).has(en) || [...(ix.ampEn.get(th) || [])].some(e => e && en.startsWith(e))) A.push(th);
+      else if ([...(ix.tambEn.get(th) || [])].some(e => e && en.startsWith(e))) T.push(th);
+    }
+    return { A, T };
+  }
+  function custPart(addr, t, a, p) {
+    let s = norm(addr);
+    const sfx = [norm(a), norm(p)].join(' ');
+    if (a && s.endsWith(sfx)) {
+      s = s.slice(0, -sfx.length).trim();
+      if (t && s.endsWith(norm(t))) s = s.slice(0, -norm(t).length).trim();
+    }
+    return s;
+  }
+
+  // ---------- main ----------
+  function checkOrder(o, ix, opt) {
+    opt = Object.assign({ pinToleranceM: 800 }, opt || {});
+    const T = key(o.TUMBOL), A = key(o.AUMPHER), P = key(o.PROVICE), Z = String(o.ZIPCODE || '').trim();
+    const issues = []; // {lvl:3|2|1, code, msg}
+    const add = (lvl, code, msg) => issues.push({ lvl, code, msg });
+    const evid = []; // amphoe suggestions {a,p,src}
+    const sysAP = A + '|' + P;
+    const ampZips = ix.ampZips.get(sysAP);
+
+    // 1) system fields consistency with master
+    if (!ix.amp.has(A) || !ix.amp.get(A).has(o.PROVICE)) {
+      add(3, 'SYS_AMP', `เขต "${o.AUMPHER}" ไม่มีอยู่ใน จ.${o.PROVICE}`);
+    }
+    if (!T) add(1, 'SYS_T_BLANK', 'ไม่มีแขวง/ตำบลในระบบ');
+    else if (!ix.triple.has(T + '|' + A + '|' + P)) {
+      const elsewhere = (ix.tamb.get(T) || []).filter(r => key(r.p) === P);
+      if (elsewhere.length) {
+        add(3, 'SYS_T_A', `แขวง "${o.TUMBOL}" ไม่ได้อยู่ในเขต ${o.AUMPHER} (อยู่ในเขต ${[...new Set(elsewhere.map(r => r.a))].join('/')})`);
+        elsewhere.forEach(r => evid.push({ a: r.a, p: r.p, src: 'แขวงในระบบ' }));
+      } else add(1, 'SYS_T', `ไม่พบแขวง "${o.TUMBOL}" ในฐานข้อมูล`);
+    }
+    if (Z && ampZips && ampZips.size && !ampZips.has(Z) && ix.zipAmp.has(Z)) {
+      const others = ix.zipAmp.get(Z);
+      add(2, 'SYS_ZIP', `รหัสไปรษณีย์ ${Z} ไม่อยู่ในเขต ${o.AUMPHER}` + (others ? ` (เป็นของ ${[...others.values()].map(v => v.a).join('/')})` : ''));
+      if (others && others.size === 1) others.forEach(v => evid.push({ a: v.a, p: v.p, src: 'รหัสไปรษณีย์ระบบ' }));
+    }
+
+    // 2) customer free text vs system
+    const cust = custPart(o.ADDRESS, o.TUMBOL, o.AUMPHER, o.PROVICE);
+    const statedP = [...new Set(findPrefixed(cust, RX_P, ix.provNames).map(x => PROV_ALIAS[x.name] ? key(PROV_ALIAS[x.name]) : x.name))];
+    const ctxP = statedP.length === 1 ? statedP[0] : P;
+    if (statedP.length && !statedP.includes(P)) add(3, 'TXT_PROV', `ลูกค้าระบุ จ.${statedP.join('/')} แต่ระบบเป็น ${o.PROVICE}`);
+
+    const inProv = (n, isAmp) => (isAmp ? [...(ix.amp.get(n) || [])] : (ix.tamb.get(n) || []).map(r => r.p)).some(p => key(p) === ctxP || key(p) === P);
+    if (!ix._provCache) ix._provCache = new Map();
+    const pc = ctxP + '|' + P;
+    if (!ix._provCache.has(pc)) ix._provCache.set(pc, { A: ix.ampNames.filter(n => inProv(n, true)), T: ix.tambNames.filter(n => inProv(n, false)) });
+    const fz = ix._provCache.get(pc);
+    const hitsA = findPrefixed(cust, RX_A, ix.ampNames.concat(['เมือง']), fz.A);
+    const fuzzyUsed = hitsA.filter(h => h.fuzzy).map(h => h.raw);
+    let statedA = hitsA.map(x => x.name);
+    // English and Lazada "ไทย/ English" forms
+    const sl = slashPairs(cust, ix);
+    statedA = statedA.concat(enAfter(cust, RX_EN_A1, ix.enAmpNames, ix.enAmp), enBefore(cust, /\s+district\b/gi, ix.enAmpNames, ix.enAmp), sl.A);
+    statedA = statedA.map(n => n === 'เมือง' ? 'เมือง' + ctxP : n).filter(n => ix.amp.has(n));
+    // prefer amphoe that exists in the context province
+    statedA = [...new Set(statedA)].filter(n => [...ix.amp.get(n)].some(p => key(p) === ctxP || key(p) === P));
+    const hitsT = findPrefixed(cust, RX_T, ix.tambNames, fz.T);
+    hitsT.filter(h => h.fuzzy).forEach(h => fuzzyUsed.push(h.raw));
+    let statedT = [...new Set(hitsT.map(x => x.name).concat(enAfter(cust, RX_EN_T1, ix.enTambNames, ix.enTamb), enBefore(cust, /\s*sub-?\s*district\b/gi, ix.enTambNames, ix.enTamb), sl.T))]
+      .filter(n => (ix.tamb.get(n) || []).some(r => key(r.p) === ctxP || key(r.p) === P));
+    // customer swapped แขวง/เขต (e.g. "แขวงห้วยขวาง เขตบางกะปิ") and the swap equals the system pair → treat as confirming
+    let swapped = false;
+    if (T && T !== A && statedA.includes(T) && statedT.includes(A) && ix.triple.has(T + '|' + A + '|' + P)) {
+      swapped = true;
+      statedA = statedA.filter(n => n !== T).concat([A]);
+      statedT = statedT.filter(n => n !== A).concat([T]);
+      add(1, 'TXT_SWAP', `ลูกค้าเขียนแขวงกับเขตสลับกัน ("แขวง${o.AUMPHER} เขต${o.TUMBOL}") — ระบบถูกแล้ว`);
+    }
+    if (statedA.length > 1 && statedA.includes(A)) add(2, 'TXT_MULTI', `ที่อยู่ลูกค้าระบุหลายเขต (${statedA.join(', ')}) — ควรถามลูกค้าว่าส่งที่ไหน`);
+    if (fuzzyUsed.length) add(1, 'TXT_FUZZY', `อ่านคำที่สะกดใกล้เคียง: ${fuzzyUsed.join(', ')}`);
+    if (statedA.length && !statedA.includes(A)) {
+      add(statedA.length > 1 ? 2 : 3, 'TXT_AMP', `ลูกค้าเขียน "เขต/อ.${statedA.join(', ')}" แต่ระบบเป็นเขต ${o.AUMPHER}`);
+      statedA.forEach(a => evid.push({ a, p: [...ix.amp.get(a)].find(p => key(p) === ctxP) || o.PROVICE, src: 'ที่อยู่ลูกค้า' }));
+    }
+
+    if (statedT.length && T && !statedT.includes(T)) {
+      for (const n of statedT) {
+        const recs = ix.tamb.get(n).filter(r => key(r.p) === ctxP || key(r.p) === P);
+        if (recs.some(r => key(r.a) === A)) add(1, 'TXT_TAMB', `ลูกค้าเขียน "แขวง/ต.${n}" แต่ระบบเป็น ${o.TUMBOL} (เขตเดียวกัน)`);
+        else if (!statedA.length || statedA.every(sa => recs.some(r => key(r.a) === sa))) {
+          const ampsOf = [...new Set(recs.map(r => r.a))];
+          add(ampsOf.length > 1 ? 2 : 3, 'TXT_TAMB_A', `ลูกค้าเขียน "แขวง/ต.${n}" ซึ่งอยู่ในเขต ${ampsOf.join('/')} ไม่ใช่เขต ${o.AUMPHER}` + (ampsOf.length > 1 ? ' (ชื่อแขวงนี้มีหลายเขต)' : ''));
+          if (ampsOf.length === 1) recs.forEach(r => evid.push({ a: r.a, p: r.p, src: 'แขวงที่ลูกค้าเขียน' }));
+        }
+      }
+    }
+
+    const zipsTxt = [...new Set((cust.match(/(?<!\d)[1-9]\d{4}(?!\d)/g) || []).filter(z => ix.zipAmp.has(z)))];
+    if (zipsTxt.length && ampZips && ampZips.size && !zipsTxt.some(z => ampZips.has(z))) {
+      const amps = new Map(); zipsTxt.forEach(z => ix.zipAmp.get(z).forEach((v, k) => amps.set(k, v)));
+      add(statedA.length && statedA.includes(A) ? 1 : 2, 'TXT_ZIP', `ลูกค้าเขียนรหัสไปรษณีย์ ${zipsTxt.join(',')} ซึ่งไม่ใช่ของเขต ${o.AUMPHER} (เป็นของ ${[...amps.values()].map(v => v.a).join('/')})`);
+      if (amps.size === 1) amps.forEach(v => { if (key(v.p) === ctxP) evid.push({ a: v.a, p: v.p, src: 'รหัสไปรษณีย์ที่ลูกค้าเขียน' }); });
+    }
+
+    // 3) map pin vs system amphoe
+    let pin = null;
+    const ll = String(o.LatLng || '').split(',').map(Number);
+    if (ll.length === 2 && isFinite(ll[0]) && isFinite(ll[1]) && ll[0] > 5 && ll[0] < 21 && ll[1] > 97 && ll[1] < 106) {
+      const [lat, lng] = ll; const sysRec = ix.poly.get(sysAP);
+      pin = { lat, lng, amp: null, dist: 0 };
+      if (sysRec && inRec(lng, lat, sysRec)) { pin.amp = sysRec.a; pin.inSys = true; }
+      else {
+        const hit = ix.polys.find(r => inRec(lng, lat, r));
+        pin.amp = hit ? hit.a : null; pin.prov = hit ? hit.p : null;
+        pin.dist = sysRec ? Math.round(distToRecM(lng, lat, sysRec)) : null;
+        if (sysRec) {
+          const where = hit ? `เขต ${hit.a}${key(hit.p) !== P ? ' จ.' + hit.p : ''}` : 'นอกเขตที่รู้จัก';
+          const km = (pin.dist / 1000).toFixed(1);
+          const textOther = issues.some(i => i.code === 'TXT_AMP' || i.code === 'TXT_TAMB_A' || i.code === 'TXT_PROV');
+          const confirmsP = !textOther && (statedA.includes(A) || (A.length >= 3 && cust.replace(/\s/g, '').includes(A)));
+          if (pin.dist > opt.pinToleranceM) {
+            if (confirmsP) add(1, 'PIN_VS_TEXT', `หมุดส่งครั้งก่อนอยู่ใน${where} (~${km} กม.) แต่ที่อยู่ลูกค้าระบุเขต ${o.AUMPHER} ตรงกับระบบ — หมุดน่าจะคลาดเคลื่อนหรือเป็นที่อยู่เดิม`);
+            else {
+              add(textOther ? 3 : 2, 'PIN', `หมุดส่งครั้งก่อนอยู่ใน${where} ห่างจากเขต ${o.AUMPHER} ~${km} กม.` + (textOther ? '' : ' (หมุดอาจคลาดหรือเป็นที่อยู่เดิม ควรถามลูกค้า)'));
+              if (hit) evid.push({ a: hit.a, p: hit.p, src: 'หมุดส่งครั้งก่อน' });
+            }
+          } else add(1, 'PIN_EDGE', `หมุดส่งครั้งก่อนอยู่${where} ใกล้รอยต่อเขต ${o.AUMPHER} (~${pin.dist} ม.)`);
+        }
+      }
+    }
+
+    // confirmation: customer text supports the system amphoe
+    const textOther = issues.some(i => i.code === 'TXT_AMP' || i.code === 'TXT_TAMB_A' || i.code === 'TXT_PROV');
+    const confirms = !textOther && (statedA.includes(A) || (A.length >= 3 && cust.replace(/\s/g, '').includes(A)));
+    if (confirms) issues.forEach(i => { if (i.code === 'SYS_ZIP' || i.code === 'TXT_ZIP') i.lvl = 1; });
+    // customer confirms the system amphoe → a wrong system tambon is a tambon fix, not a district move
+    if (statedA.includes(A)) {
+      issues.forEach(i => { if (i.code === 'SYS_T_A') { i.lvl = 1; i.msg += ' — ลูกค้าระบุเขตตรงกับระบบ แก้แค่แขวง'; } });
+      for (let k = evid.length - 1; k >= 0; k--) if (evid[k].src === 'แขวงในระบบ') evid.splice(k, 1);
+    }
+    // pin sits inside the system amphoe → text evidence alone is not enough to call it wrong
+    if (pin && pin.inSys && issues.some(i => i.lvl === 3)) {
+      const fromText = issues.some(i => i.lvl === 3 && /^TXT_/.test(i.code));
+      if (fromText) add(1, 'PIN_SYS', `หมุดส่งครั้งก่อนอยู่ในเขต ${o.AUMPHER} ตรงกับระบบ — ลูกค้าอาจย้ายที่อยู่ ยึดตามที่อยู่ที่ลูกค้าพิมพ์`);
+      else { issues.forEach(i => { if (i.lvl === 3) i.lvl = 2; }); add(2, 'PIN_SYS', `หมุดส่งครั้งก่อนอยู่ในเขต ${o.AUMPHER} ตรงกับระบบ — ข้อมูลขัดกัน ควรถามลูกค้า`); }
+    }
+
+    // suggestion: amphoe by evidence votes, then tambon + zip inside that amphoe
+    const votes = new Map();
+    evid.forEach(e => { const k = e.a + '|' + e.p; if (!votes.has(k)) votes.set(k, { a: e.a, p: e.p, src: new Set() }); votes.get(k).src.add(e.src); });
+    const best = [...votes.values()].filter(v => !(key(v.a) === A && key(v.p) === P)).sort((x, y) => y.src.size - x.src.size)[0] || null;
+    const sa = best ? best.a : o.AUMPHER, sp = best ? best.p : o.PROVICE;
+    const inAmp = n => (ix.tamb.get(n) || []).find(r => key(r.a) === key(sa) && key(r.p) === key(sp));
+    let st = null, src = best ? [...best.src] : [];
+    const tStated = (T && statedT.includes(T) && inAmp(T)) ? null : statedT.map(inAmp).find(Boolean);
+    if (tStated) { st = tStated; if (!best && key(st.t) !== T) src = ['แขวงที่ลูกค้าเขียน']; }
+    else if (T && inAmp(T)) st = inAmp(T);
+    let sz = null;
+    if (st && st.zips.length) sz = (zipsTxt.find(z => st.zips.includes(z))) || (st.zips.includes(Z) ? Z : st.zips[0]);
+    else { const az = ix.ampZips.get(key(sa) + '|' + key(sp)); if (az) sz = zipsTxt.find(z => az.has(z)) || (az.has(Z) ? Z : (az.size === 1 ? [...az][0] : null)); }
+    const changed = best || (st && key(st.t) !== T) || (sz && sz !== Z && issues.some(i => i.code === 'SYS_ZIP'));
+    const suggest = changed ? { a: sa, p: sp, t: st ? st.t : null, zip: sz, src, ampChanged: !!best } : null;
+    // PRIMARY CHECK: what the customer wrote vs AUMPHER. Only this can make "เขตผิด".
+    const PRIMARY = new Set(['TXT_AMP', 'TXT_TAMB_A', 'TXT_PROV']);
+    issues.forEach(i => { if (i.lvl === 3 && !PRIMARY.has(i.code)) i.lvl = 2; });
+    let addrVsAmp;
+    const tAmps = [...new Set(statedT.flatMap(n => (ix.tamb.get(n) || []).filter(r => key(r.p) === ctxP || key(r.p) === P).map(r => key(r.a))))];
+    if (statedP.length && !statedP.includes(P)) addrVsAmp = 'ไม่ตรง (จังหวัดอื่น)';
+    else if (statedA.length) addrVsAmp = statedA.includes(A) ? (statedA.length > 1 ? 'ระบุหลายเขต' : 'ตรง') : 'ไม่ตรง (ลูกค้าเขียนเขต ' + statedA.join('/') + ')';
+    else if (tAmps.length) addrVsAmp = tAmps.includes(A) ? 'ตรง (ดูจากแขวง)' : (tAmps.length > 1 ? 'ไม่ชัด (ชื่อแขวงนี้มีในเขต ' + tAmps.join('/') + ')' : 'ไม่ตรง (แขวงที่เขียนอยู่เขต ' + tAmps[0] + ')');
+    else addrVsAmp = 'ลูกค้าไม่ได้ระบุเขต/แขวง';
+    // customer address matches AUMPHER → treat as correct; other findings stay as notes only
+    if (/^ตรง/.test(addrVsAmp)) issues.forEach(i => { i.lvl = 0; });
+    const lvl = issues.reduce((m, i) => Math.max(m, i.lvl), 0);
+    const evidence = statedA.length + statedT.length + zipsTxt.length + (pin ? 1 : 0);
+    return { lvl, issues, cust, pin, suggest, addrVsAmp, unverifiable: lvl === 0 && evidence === 0 };
+  }
+
+  function crossCheck(list) { // list of {r, ...checkOrder result}
+    const groups = new Map();
+    list.forEach(x => { const k = String(x.r.TEL || '') + '|' + key(x.cust); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+    groups.forEach(g => {
+      const amps = [...new Set(g.map(x => x.r.AUMPHER))];
+      if (g.length > 1 && amps.length > 1) g.forEach(x => {
+        const ok = /^ตรง/.test(x.addrVsAmp || '');
+        x.issues.push({ lvl: ok ? 0 : 2, code: 'SAME_CUST', msg: `ลูกค้าคนเดียวกัน ที่อยู่เดียวกัน แต่ระบบให้เขตต่างกันในแต่ละออเดอร์ (${amps.join(' / ')})` });
+        if (!ok) { x.lvl = Math.max(x.lvl, 2); x.unverifiable = false; }
+      });
+    });
+    return list;
+  }
+
+  // Google Maps geocode result → supporting evidence only (max "ควรตรวจ")
+  const GEO_PRECISE_TYPES = ['premise', 'subpremise', 'establishment', 'point_of_interest', 'street_address'];
+  function geoPrecise(g) {
+    if (!g || g.none || g.err || !isFinite(g.lat) || !isFinite(g.lng)) return false;
+    const ty = g.ty || [];
+    if (g.pm && g.lt !== 'ROOFTOP') return false;
+    if (g.lt === 'ROOFTOP' || g.lt === 'RANGE_INTERPOLATED') return true;
+    return g.lt === 'GEOMETRIC_CENTER' && ty.some(t => GEO_PRECISE_TYPES.includes(t));
+  }
+  function geoQuery(x) { // text sent to Google: customer-typed part, phones removed, + province
+    let q = String(x.cust || '').replace(/(\+?66|0)[\s-]?\d{1,2}[\s-]?\d{3}[\s-]?\d{3,4}/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q.replace(/[\s\d\/.,-]/g, '').length < 4) return null;
+    const P = String(x.r.PROVICE || '').trim();
+    if (P && !q.includes(P.replace('กรุงเทพมหานคร', 'กรุงเทพ'))) q += ' ' + P;
+    return q;
+  }
+  function provBox(ix, prov) { // [south, west, north, east] of a province, to bias Google
+    if (!ix._pbox) ix._pbox = new Map();
+    const P = key(prov);
+    if (!ix._pbox.has(P)) {
+      let b = null;
+      ix.polys.forEach(r => { if (key(r.p) !== P) return; const q = r.bbox; b = b ? [Math.min(b[0], q[1]), Math.min(b[1], q[0]), Math.max(b[2], q[3]), Math.max(b[3], q[2])] : [q[1], q[0], q[3], q[2]]; });
+      ix._pbox.set(P, b ? b.map(v => +v.toFixed(4)) : null);
+    }
+    return ix._pbox.get(P);
+  }
+  function applyGeo(x, g, ix, opt) {
+    opt = Object.assign({ pinToleranceM: 800 }, opt || {});
+    const n0 = x.issues.length, k = applyGeo0(x, g, ix, opt);
+    if (g && g.seen) {
+      for (let i = n0; i < x.issues.length; i++) x.issues[i].msg = x.issues[i].msg.replace(/^Google Maps:?/, `Google Maps (ตรวจไปแล้ววันนี้ ${g.at || ''} ใช้ผลเดิม):`);
+      if (x.geoTxt) x.geoTxt += ` (ผลเดิม ${g.at || ''})`;
+    }
+    return k;
+  }
+  function applyGeo0(x, g, ix, opt) {
+    const o = x.r, A = key(o.AUMPHER), P = key(o.PROVICE);
+    x.geo = g;
+    if (!g || g.none) { x.geoTxt = 'ไม่พบ'; x.issues.push({ lvl: 0, code: 'GMAP_NONE', msg: 'Google Maps หาที่อยู่นี้ไม่เจอ' }); return 'none'; }
+    if (g.err) { x.geoTxt = 'ตรวจไม่ได้'; return 'err'; }
+    if (!geoPrecise(g)) { x.geoTxt = 'ไม่ละเอียดพอ: ' + (g.fa || ''); x.issues.push({ lvl: 0, code: 'GMAP_WEAK', msg: `Google Maps หาเจอแบบคร่าว ๆ (${g.fa || ''}) ไม่นำมาใช้` }); return 'weak'; }
+    const sysRec = ix.poly.get(A + '|' + P);
+    let hit = null, dist = 0;
+    if (sysRec && inRec(g.lng, g.lat, sysRec)) hit = sysRec;
+    else { hit = ix.polys.find(r => inRec(g.lng, g.lat, r)) || null; dist = sysRec ? Math.round(distToRecM(g.lng, g.lat, sysRec)) : null; }
+    const where = hit ? `เขต ${hit.a}${key(hit.p) !== P ? ' จ.' + hit.p : ''}` : 'นอกเขตที่รู้จัก';
+    if (!hit || (key(hit.p) !== P && !(sysRec && dist !== null && dist <= opt.pinToleranceM))) { // Google landed in another province → most likely another place
+      x.geoTxt = 'ต่างจังหวัด ไม่ใช้: ' + (g.fa || '');
+      x.issues.push({ lvl: 0, code: 'GMAP_PROV', msg: `Google Maps ไปเจอที่${hit ? ' จ.' + hit.p : 'นอกพื้นที่ที่รู้จัก'} (${g.fa || ''}) ไม่ใช่จังหวัดในระบบ น่าจะเป็นสถานที่อื่น ไม่นำมาใช้` });
+      return 'weak';
+    }
+    x.geoTxt = where + ' · ' + (g.fa || '');
+    if (hit === sysRec || (sysRec && dist !== null && dist <= opt.pinToleranceM)) {
+      x.issues.push({ lvl: 0, code: 'GMAP_OK', msg: hit === sysRec ? `Google Maps: ที่อยู่นี้อยู่ในเขต ${o.AUMPHER} ตรงกับระบบ` : `Google Maps: ที่อยู่นี้อยู่${where} ใกล้รอยต่อเขต ${o.AUMPHER} (~${dist} ม.)` });
+      if (x.unverifiable) x.unverifiable = false;
+      return 'ok';
+    }
+    if (!sysRec) { x.issues.push({ lvl: 0, code: 'GMAP_NA', msg: `Google Maps: ที่อยู่นี้อยู่${where}` }); return 'na'; }
+    x.issues.push({ lvl: 2, code: 'GMAP', msg: `Google Maps หาที่อยู่นี้เจอใน${where} ห่างจากเขต ${o.AUMPHER} ~${(dist / 1000).toFixed(1)} กม.` + (g.pm ? ' (Google จับคู่ที่อยู่ได้บางส่วน อาจเป็นสถานที่อื่น)' : '') + ' — ควรตรวจก่อนแก้' });
+    x.lvl = Math.max(x.lvl, 2); x.unverifiable = false;
+    if (hit) {
+      const s = x.suggest;
+      if (s && s.ampChanged && key(s.a) === key(hit.a) && key(s.p) === key(hit.p)) { if (!s.src.includes('Google Maps')) s.src.push('Google Maps'); }
+      else if (!s || !s.ampChanged) {
+        // tambon from Google's address components, else none
+        const comp = (g.c || []).map(c => key(String(c[0]).replace(/^(แขวง|ตำบล|ต\.)\s*/, '')));
+        const recs = comp.map(n => (ix.tamb.get(n) || []).find(r => key(r.a) === key(hit.a) && key(r.p) === key(hit.p))).filter(Boolean);
+        const st = recs[0] || null;
+        const gz = (g.c || []).find(c => c[1] === 'postal_code');
+        const az = ix.ampZips.get(key(hit.a) + '|' + key(hit.p));
+        const zip = st ? (gz && st.zips.includes(gz[0]) ? gz[0] : st.zips[0]) : (gz && az && az.has(gz[0]) ? gz[0] : (az && az.size === 1 ? [...az][0] : null));
+        x.suggest = { a: hit.a, p: hit.p, t: st ? st.t : null, zip, src: ['Google Maps'], ampChanged: true };
+      }
+    }
+    return 'other';
+  }
+  const COMPANIES = ['1247', '1230'];
+  function companyFilter(rows) { // keep only the companies CSC handles
+    if (!rows.length || !('COMPANY_ID' in rows[0])) return { keep: rows, dropped: {}, hasCol: false };
+    const keep = [], dropped = {};
+    rows.forEach(r => { const c = String(r.COMPANY_ID || '').trim(); if (COMPANIES.includes(c)) keep.push(r); else dropped[c || '(ว่าง)'] = (dropped[c || '(ว่าง)'] || 0) + 1; });
+    return { keep, dropped, hasCol: true };
+  }
+  const REQUIRED = ['ORDERID', 'CHANNEL', 'ADDRESS', 'TUMBOL', 'AUMPHER', 'PROVICE', 'ZIPCODE'];
+  const OPTIONAL = ['LatLng', 'TEL', 'CUSTOMER_NAME'];
+  root.AddrCheck = { buildIndex, checkOrder, crossCheck, applyGeo, geoQuery, geoPrecise, provBox, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
+  if (typeof module !== 'undefined') module.exports = root.AddrCheck;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const LV={3:'เขตผิด',2:'ควรตรวจ',1:'ข้อมูลเพิ่ม',0:'ปกติ'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let DROPPED={}, SRCNAME='', IX=null, RAW=null, RES=[], view=[], shown=0, PAGE=200, lvlFilter='32';
+const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textContent=`กำลังโหลดข้อมูลแขวง/เขต ${d}/${n} …`; })
+  .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
+  .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
+function ix(){ return IX; }
+const LOG_URL='https://script.google.com/macros/s/AKfycbyZiUbZCQC_jUFTZ4RP0m49ttlFgyTOgK8G-WS_IEfQn5EA7aZ-IdIi4gxAlDLifLb3Cw/exec';
+function logUse(a,extra){ try{ if(!LOG_URL||LOG_URL.indexOf('__')===0||!/^https?:$/.test(location.protocol)||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return; fetch(LOG_URL,{method:'POST',mode:'no-cors',keepalive:true,body:JSON.stringify(Object.assign({a},extra||{}))}).catch(()=>{}); }catch(e){} }
+function logCheck(){ const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; }); logUse('ตรวจไฟล์',{f:SRCNAME,o:RES.length,x:dropOrders().total,c3:c[3],c2:c[2],na:c.na,c1:c[1],c0:c[0]}); }
+function geoOn(){ return !!LOG_URL && LOG_URL.indexOf('__')!==0 && (window.__GEO_FORCE || (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname))); }
+let GEO_RUN=0; const GEO_MEM=new Map();
+function lockBtns(on){ [['xlsxBtn','ดาวน์โหลด Excel'],['copyBtn','คัดลอกผลไปวาง Excel']].forEach(([id,t])=>{ const b=$(id); b.disabled=on; b.textContent=on?'รอ Google Maps…':t; b.title=on?'รอให้ตรวจกับ Google Maps เสร็จก่อน ไฟล์จะได้มีผลครบ':''; }); }
+const hhmm=()=>new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
+async function geoPass(){
+  const box=$('geoInfo');
+  if(!geoOn()||!RES.length){ lockBtns(false); return; }
+  const run=++GEO_RUN, tol=+$('tol').value||0, I=ix();
+  const todo=RES.filter(x=>x.unverifiable||x.lvl===2).map(x=>({x,q:AddrCheck.geoQuery(x),k:String(x.r.ORDERID||'')})).filter(o=>o.q);
+  if(!todo.length){ box.className='geobox hidden'; lockBtns(false); return; }
+  const st={ok:0,other:0,none:0,weak:0,err:0,na:0}; let done=0, seen=0, quota=false, net=false;
+  const n=todo.length.toLocaleString();
+  const msg=fin=>{
+    const pct=Math.round(done/todo.length*100);
+    if(!fin){ box.className='geobox run'; box.innerHTML=`<b>⏳ กำลังตรวจที่อยู่กับ Google Maps ${done.toLocaleString()}/${n} ออเดอร์</b> (ตรวจไม่ได้ + ควรตรวจ) — รอสักครู่ก่อนดาวน์โหลดหรือคัดลอก<div class="gbar"><i style="width:${pct}%"></i></div>`; return; }
+    const bad=quota||net;
+    box.className='geobox '+(bad?'warn':'done');
+    box.innerHTML=`<b>${bad?'⚠️ ตรวจกับ Google Maps ไม่ครบ':'✓ ตรวจกับ Google Maps เสร็จแล้ว'}</b> ${n} ออเดอร์`
+      +(seen?` · <b>ตรวจไปแล้ววันนี้ ${seen.toLocaleString()}</b> (ใช้ผลเดิม ไม่ส่งไป Google ซ้ำ) · ตรวจใหม่ ${(todo.length-seen).toLocaleString()}`:'')
+      +`<br>ตรงกับระบบ ${st.ok} · อยู่เขตอื่น ${st.other} (ขึ้นควรตรวจ) · หาไม่เจอ ไม่ละเอียดพอ หรือไปเจอต่างจังหวัด ${st.none+st.weak}`
+      +(quota?'<br>โควตา Google วันนี้หมด ออเดอร์ที่เหลือคงสถานะเดิม ลองใหม่พรุ่งนี้':'')+(net?'<br>บางส่วนเชื่อมต่อ Google ไม่ได้ ออเดอร์เหล่านั้นคงสถานะเดิม':'');
+  };
+  lockBtns(true); msg(false);
+  for(let i=0;i<todo.length;i+=40){
+    if(run!==GEO_RUN) return;
+    const part=todo.slice(i,i+40), need=part.filter(o=>!GEO_MEM.has(o.k+'|'+o.q));
+    if(need.length&&!quota){
+      try{ const r=await fetch(LOG_URL,{method:'POST',body:JSON.stringify({a:'geocode',q:need.map((o,j)=>[j,o.q,o.k,AddrCheck.provBox(I,o.x.r.PROVICE)])})}); const js=await r.json();
+        js.forEach(([j,g])=>{ if(g.err==='quota') quota=true; if(!g.err){ if(!g.seen) g._at=hhmm(); GEO_MEM.set(need[j].k+'|'+need[j].q,g); need[j].fresh=true; } else need[j].gerr=g; }); }
+      catch(e){ net=true; need.forEach(o=>o.gerr={err:'net'}); }
+    }
+    if(run!==GEO_RUN) return;
+    part.forEach(o=>{
+      let g=GEO_MEM.get(o.k+'|'+o.q);
+      if(g && !o.fresh && !g.seen) g=Object.assign({},g,{seen:1,at:g._at}); // checked earlier in this browser today
+      g=g||o.gerr||{err:'quota'};
+      if(g.seen) seen++;
+      st[AddrCheck.applyGeo(o.x,g,I,{pinToleranceM:tol})]++;
+    });
+    done+=part.length; msg(false);
+  }
+  const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
+  msg(true); lockBtns(false); summary(); filter();
+  logUse('ตรวจกับ Google Maps',{f:SRCNAME,o:todo.length,c2:st.other,c0:st.ok});
+}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+function readFile(f){
+  $('fileInfo').textContent='กำลังอ่าน '+f.name+' …'; SRCNAME=f.name;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      RAW=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!RAW.length) throw new Error('ชีตแรกไม่มีข้อมูล');
+      const cols=Object.keys(RAW[0]), miss=AddrCheck.REQUIRED.filter(c=>!cols.includes(c)), missOpt=AddrCheck.OPTIONAL.filter(c=>!cols.includes(c));
+      if(miss.length) throw new Error('ไม่พบคอลัมน์ '+miss.join(', ')+' ในชีตแรก (ไฟล์ต้นทางอาจเปลี่ยนรูปแบบ)');
+      if(missOpt.length) toast('ไม่พบคอลัมน์ '+missOpt.join(', ')+' — ตรวจได้น้อยลง');
+      $('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'+(IX?'':' · รอข้อมูลแขวง/เขต…');
+      REFS_READY.then(()=>{$('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'; run(); logCheck();});
+    }catch(err){$('fileInfo').textContent='อ่านไฟล์ไม่ได้: '+err.message+' — ตรวจว่าเป็นไฟล์ report_appointment แบบ .xlsx';}
+  };
+  r.readAsArrayBuffer(f);
+}
+function run(){
+  const tol=+$('tol').value||0, I=ix(), byId=new Map();
+  const cf=AddrCheck.companyFilter(RAW); DROPPED=cf.dropped;
+  if(!cf.hasCol) toast('ไม่พบคอลัมน์ COMPANY_ID — ตรวจทุกออเดอร์');
+  cf.keep.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
+  RES=AddrCheck.crossCheck([...byId.values()].map(({r,lines,total})=>Object.assign({r,lines,total},AddrCheck.checkOrder(r,I,{pinToleranceM:tol}))));
+  const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
+  $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden'); $('xlsxBtn').classList.remove('hidden');
+  const chs=[...new Set(RES.map(x=>x.r.CHANNEL))].sort(); $('fCh').innerHTML='<option value="">ทั้งหมด</option>'+chs.map(c=>`<option>${esc(c)}</option>`).join('');
+  const amps=[...new Set(RES.map(x=>x.r.AUMPHER))].sort((a,b)=>a.localeCompare(b,'th')); $('fAmp').innerHTML='<option value="">ทั้งหมด</option>'+amps.map(c=>`<option>${esc(c)}</option>`).join('');
+  summary(); filter(); geoPass();
+}
+function summary(){
+  const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; });
+  const t=[['all',RES.length,'ออเดอร์ทั้งหมด',''],['3',c[3],'เขตผิด','c3'],['2',c[2],'ควรตรวจ','c2'],['na',c.na,'ตรวจไม่ได้ (ไม่มีข้อมูล)','cna'],['1',c[1],'ข้อมูลเพิ่ม','c1'],['0',c[0],'ปกติ','c0']];
+  $('tiles').innerHTML=t.map(([k,n,l,cl])=>`<button type="button" class="tile ${cl}" data-l="${k}" aria-pressed="false"><div class="n">${n.toLocaleString()}</div><div class="l">${l}</div></button>`).join('');
+  $('tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{$('fLvl').value=b.dataset.l;filter();});
+  const dz=dropOrders(); $('dropNote').textContent=dz.total?`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')} · ไม่ได้ตรวจ ${dz.total.toLocaleString()} ออเดอร์ (${dz.text})`:`ตรวจเฉพาะ COMPANY_ID ${AddrCheck.COMPANIES.join(' และ ')}`;
+  // channel table
+  const ch=chanCounts(); const tot={n:0}; ST.forEach(k=>tot[k]=0); Object.values(ch).forEach(v=>{tot.n+=v.n; ST.forEach(k=>tot[k]+=v[k]);});
+  const cell=(v,k)=>`<td class="num">${v[k].toLocaleString()}</td>`;
+  $('byChannel').innerHTML='<div style="overflow-x:auto"><table class="mini"><thead><tr><th>ช่องทาง</th><th class="num">ออเดอร์</th>'+ST.map(k=>`<th class="num">${k}</th>`).join('')+'<th class="num">% เขตผิด</th></tr></thead><tbody>'+
+    Object.entries(ch).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${v.n.toLocaleString()}</td>${ST.map(s=>cell(v,s)).join('')}<td class="num">${(v['เขตผิด']/v.n*100).toFixed(1)}%</td></tr>`).join('')+
+    `<tr style="font-weight:600"><td>รวม</td><td class="num">${tot.n.toLocaleString()}</td>${ST.map(s=>cell(tot,s)).join('')}<td class="num">${(tot['เขตผิด']/Math.max(1,tot.n)*100).toFixed(1)}%</td></tr></tbody></table></div>`;
+  // pair table
+  const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
+  const top=Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,10), mx=top.length?top[0][1]:1;
+  $('byPair').innerHTML=top.length?'<table class="mini"><tbody>'+top.map(([k,n])=>`<tr><td style="width:55%">${esc(k)}</td><td><div class="bar" style="width:${Math.max(4,n/mx*100)}%"></div></td><td class="num">${n}</td></tr>`).join('')+'</tbody></table><p class="muted" style="font-size:13px;margin:8px 0 0">ถ้าคู่เดิมโผล่ซ้ำทุกวัน มักเป็นการแมปรหัสไปรษณีย์เป็นเขตเดียวของช่องทาง ควรแจ้งแก้ที่ต้นทาง</p>':'<p class="muted">ไม่พบ</p>';
+}
+const ST=['เขตผิด','ควรตรวจ','ตรวจไม่ได้','ข้อมูลเพิ่ม','ปกติ'];
+function chanCounts(){ const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; if(!ch[k]){ch[k]={n:0}; ST.forEach(s=>ch[k][s]=0);} ch[k].n++; ch[k][x.unverifiable?'ตรวจไม่ได้':LV[x.lvl]]++;}); return ch; }
+function dropOrders(){ // DROPPED counts rows; convert to orders
+  const ids={}; RAW.forEach(r=>{const c=String(r.COMPANY_ID||'').trim(); if(!AddrCheck.COMPANIES.includes(c)&&('COMPANY_ID' in r)){ (ids[c||'(ว่าง)']=ids[c||'(ว่าง)']||new Set()).add(r.ORDERID||r.ORDERID_ORG); }});
+  const e=Object.entries(ids).map(([k,v])=>[k,v.size]); return {total:e.reduce((a,b)=>a+b[1],0), text:e.map(([k,v])=>`${k} ${v.toLocaleString()}`).join(', '), list:e};
+}
+function filter(){
+  lvlFilter=$('fLvl').value; const q=$('q').value.trim().toLowerCase(), ch=$('fCh').value, amp=$('fAmp').value;
+  view=RES.filter(x=>{
+    if(lvlFilter==='32'){if(x.lvl<2) return false;} else if(lvlFilter==='na'){if(!x.unverifiable) return false;} else if(lvlFilter==='0'){if(x.lvl!==0||x.unverifiable) return false;} else if(lvlFilter!=='all' && x.lvl!==+lvlFilter) return false;
+    if(ch && x.r.CHANNEL!==ch) return false; if(amp && x.r.AUMPHER!==amp) return false;
+    if(q){const s=[x.r.ORDERID,x.r.CUSTOMER_NAME,x.r.TEL,x.r.ADDRESS,x.r.TUMBOL,x.r.AUMPHER,x.suggest&&x.suggest.a].join(' ').toLowerCase(); if(!s.includes(q)) return false;}
+    return true;});
+  document.querySelectorAll('.tile').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.l===lvlFilter)));
+  shown=0; $('tbody').innerHTML=''; more();
+}
+function row(x){
+  const r=x.r, p=x.pin;
+  const pin=p?`<a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" rel="noopener">หมุดครั้งก่อน</a><div class="muted" style="font-size:12px">${p.amp?esc(p.amp):'—'}</div>`:'<span class="muted">ไม่มีหมุด</span>';
+  const g=x.suggest;
+  const conf=g?(g.src.length>=2?'มั่นใจสูง':'มั่นใจปานกลาง'):'';
+  const sug=g?`<div class="sug">${g.t?'แขวง '+esc(g.t)+'<br>':''}${g.ampChanged?'<b>เขต '+esc(g.a)+'</b>':'เขต '+esc(g.a)}${g.p!==r.PROVICE?' จ.'+esc(g.p):''}${g.zip?'<br>'+esc(g.zip):''}<small>${conf} · จาก ${g.src.map(esc).join(', ')}</small></div>`:'<span class="muted">—</span>';
+  return `<tr class="l${x.lvl}"><td>${x.unverifiable?'<span class="pill pna">ตรวจไม่ได้</span>':`<span class="pill p${x.lvl}">${LV[x.lvl]}</span>`}</td>
+  <td><div class="mono">${esc(r.ORDERID)}</div><div class="muted" style="font-size:13px">${esc(r.CHANNEL)} · ${esc(r.CUSTOMER_NAME)}</div></td>
+  <td class="sys">แขวง <b>${esc(r.TUMBOL)||'—'}</b><br>เขต <b>${esc(r.AUMPHER)}</b><br><span class="muted">${esc(r.PROVICE)} ${esc(r.ZIPCODE)}</span></td>
+  <td class="addr">${esc(x.cust)||'<span class="muted">—</span>'}</td>
+  <td><div class="av ${/^ไม่ตรง/.test(x.addrVsAmp)?'bad':(/^ตรง/.test(x.addrVsAmp)?'good':'')}">ที่อยู่ลูกค้า vs AUMPHER: <b>${esc(x.addrVsAmp)}</b></div>${x.issues.length?'<ul class="iss">'+x.issues.sort((a,b)=>b.lvl-a.lvl).map(i=>`<li class="i${i.lvl}">${esc(i.msg)}</li>`).join('')+'</ul>':(x.unverifiable?'<span class="muted">ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ หรือหมุดให้ตรวจ — ถามลูกค้าตอนโทรนัด</span>':'<span class="muted">ไม่พบข้อขัดแย้ง</span>')}</td>
+  <td>${sug}</td><td>${pin}</td></tr>`;
+}
+function more(){
+  const chunk=view.slice(shown,shown+PAGE); $('tbody').insertAdjacentHTML('beforeend',chunk.map(row).join('')); shown+=chunk.length;
+  $('count').textContent=`แสดง ${shown.toLocaleString()} จาก ${view.length.toLocaleString()} ออเดอร์`;
+  $('more').classList.toggle('hidden',shown>=view.length);
+}
+const HEAD=['ระดับ','ที่อยู่ลูกค้า vs AUMPHER','ORDERID','COMPANY_ID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','Google Maps','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
+const LVNAME=x=>x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
+function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,x.geoTxt||'','','','']); }
+function copyTSV(){
+  const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
+  const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>(logUse('คัดลอก'),toast(`คัดลอก ${view.length} ออเดอร์แล้ว วางใน Excel ได้เลย`)),()=>toast('คัดลอกไม่ได้ ลองใหม่อีกครั้ง'));
+}
+function downloadXLSX(){
+  try{
+    const wb=XLSX.utils.book_new();
+    const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,40,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
+    const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
+    const chc=chanCounts(); const ch={}; Object.entries(chc).forEach(([k,v])=>ch[k]=[v.n].concat(ST.map(s=>v[s])));
+    const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
+    const dz=dropOrders();
+    const sum=[['ไฟล์ต้นทาง',SRCNAME],['ตรวจเมื่อ',new Date().toLocaleString('th-TH')],['COMPANY_ID ที่ตรวจ',AddrCheck.COMPANIES.join(', ')],['ออเดอร์ที่ตรวจ',RES.length],['ไม่ได้ตรวจ (COMPANY_ID อื่น)',dz.total]].concat(dz.list.map(([k,v])=>['   '+k,v])).concat([[]])
+      .concat(Object.entries(c).map(([k,v])=>[k,v])).concat([[],['ช่องทาง','ออเดอร์'].concat(ST)]).concat(Object.entries(ch).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[k].concat(v)))
+      .concat([[],['เขตในระบบ → เขตที่ควรเป็น','จำนวน']]).concat(Object.entries(pr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]));
+    const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10}];
+    XLSX.utils.book_append_sheet(wb,ws0,'สรุป');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.lvl>=2)),'ต้องแก้-ตรวจ');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.unverifiable)),'ตรวจไม่ได้');
+    XLSX.utils.book_append_sheet(wb,mk(RES),'ทั้งหมด');
+    const m=String(SRCNAME).match(/(20\d{6})/); const d=m?m[1]:new Date().toISOString().slice(0,10).replace(/-/g,'');
+    XLSX.writeFile(wb,`ผลตรวจเขต_${d}.xlsx`);
+    toast('กำลังดาวน์โหลดไฟล์ Excel'); logUse('ดาวน์โหลด Excel');
+  }catch(e){ toast('ดาวน์โหลดไม่ได้ในหน้านี้ ใช้ปุ่มคัดลอกแทน'); }
+}
+$('file').onchange=e=>{if(e.target.files[0]) readFile(e.target.files[0]);};
+const d=$('drop');
+['dragenter','dragover'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('over');}));
+d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) readFile(f);});
+$('tol').onchange=()=>{if(RAW) run();};
+['q'].forEach(id=>$(id).addEventListener('input',filter));
+['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
+function route(){ const how=location.hash==='#how'; $('pageCheck').classList.toggle('hidden',how); $('pageHow').classList.toggle('hidden',!how); $('tabHow').classList.toggle('on',how); $('tabCheck').classList.toggle('on',!how); $('copyBtn').style.visibility=$('xlsxBtn').style.visibility=how?'hidden':''; }
+window.addEventListener('hashchange',route); route(); logUse('เปิดหน้าเว็บ');
+$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX;
+})();
+</script>
+</body>
+</html>
+
   /* layout: header + drop zone, summary row, two side panels (channel, district pairs), then the filterable order table */
   --bg:#f4f6f8; --surface:#ffffff; --ink:#17212b; --muted:#5b6876; --line:#dde3e9;
   --accent:#0b6e8a; --accent-ink:#ffffff;
