@@ -85,10 +85,19 @@ a{color:var(--accent)}
 .toast.show{opacity:1}
 .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;color:var(--muted);font-size:13px}
 .hidden{display:none!important}
+.share{border:1px solid var(--line);border-left:5px solid var(--info);border-radius:10px;padding:8px 12px;font-size:14px;margin-top:8px;background:var(--info-bg)} .share.run{border-left-color:var(--warn);background:var(--warn-bg)} .share.done{border-left-color:var(--ok);background:var(--ok-bg)} .share.warn{border-left-color:var(--crit);background:var(--crit-bg)}
 .geobox{border:1px solid var(--line);border-left:5px solid var(--info);border-radius:10px;padding:10px 14px;background:var(--info-bg);font-size:14px;line-height:1.6}
 .geobox.run{border-left-color:var(--warn);background:var(--warn-bg)} .geobox.done{border-left-color:var(--ok);background:var(--ok-bg)} .geobox.warn{border-left-color:var(--crit);background:var(--crit-bg)}
 .gbar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden} .gbar i{display:block;height:100%;background:var(--warn);transition:width .3s}
 .btn:disabled{opacity:.55;cursor:wait}
+.btn.sm{padding:4px 10px;font-size:13px;min-height:0}
+.fixbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pick{margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:grid;gap:6px;min-width:240px}
+.pick label{display:grid;gap:2px;font-size:12px;color:var(--muted)} .pick select{font:inherit;font-size:13px;padding:4px;color:var(--ink,inherit)}
+.pbtn{display:flex;gap:6px}
+.fixd{margin-top:8px;color:var(--ok);font-size:13px} .fixd small{display:block;color:var(--muted)} .fixd .btn{margin-top:4px}
+.ftag{font-size:11px;color:var(--ok);margin-top:3px;font-weight:600}
+tr.fixed td{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
 .tabs{display:flex;gap:4px;margin-top:10px;border-bottom:1px solid var(--line)}
 .tabs a{padding:6px 14px;text-decoration:none;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
 .tabs a.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -120,6 +129,7 @@ a{color:var(--accent)}
     </div>
     <div class="controls">
       <button class="btn hidden" id="xlsxBtn" type="button">ดาวน์โหลด Excel</button>
+      <button class="btn hidden" id="tmsBtn" type="button" title="ไฟล์ที่ import เข้ามา แก้แขวง/เขต/จังหวัด/รหัสไปรษณีย์ตามที่ยืนยัน ใช้อัปโหลดเข้า TMS">ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (0)</button>
       <button class="btn ghost hidden" id="copyBtn" type="button">คัดลอกผลไปวาง Excel</button>
     </div>
   </header>
@@ -128,8 +138,9 @@ a{color:var(--accent)}
   <div class="drop" id="drop">
     <div>
       <p><b>ลากไฟล์ .xlsx มาวางตรงนี้</b> หรือกดเลือกไฟล์</p>
-      <p class="muted" id="fileInfo">ไฟล์ถูกอ่านในเบราว์เซอร์ของคุณ ระบบส่งเฉพาะข้อความที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจ ไปตรวจกับ Google Maps (ตัดเบอร์โทรออก) และบันทึกวันเวลาที่ใช้กับจำนวนที่ตรวจ</p>
+      <p class="muted" id="fileInfo">ไฟล์ที่อัปโหลดถูกเก็บไว้ใน Google Drive ของทีม ใครเปิดเว็บวันนี้จะเห็นไฟล์เดียวกันโดยไม่ต้องอัปโหลดซ้ำ · ที่อยู่ของออเดอร์ที่ตรวจไม่ได้/ควรตรวจถูกส่งไปตรวจกับ Google Maps (ตัดเบอร์โทรออก)</p>
       <p class="muted" id="refInfo" style="font-size:13px">กำลังโหลดข้อมูลแขวง/เขต …</p>
+      <div id="shareInfo" class="share hidden" aria-live="polite"></div>
     </div>
     <div class="controls">
       <label for="tol">ระยะหมุดที่ยอมให้เกินรอยต่อเขต (ม.)<input type="number" id="tol" value="800" min="0" step="100" style="width:90px"></label>
@@ -162,7 +173,7 @@ a{color:var(--accent)}
       <div class="controls">
         <input type="search" id="q" placeholder="ค้นหาเลขออเดอร์ ชื่อ เขต แขวง ที่อยู่…" aria-label="ค้นหา">
         <label for="fLvl">ระดับ
-          <select id="fLvl"><option value="32">เขตผิด + ควรตรวจ</option><option value="3">เขตผิด</option><option value="2">ควรตรวจ</option><option value="1">ข้อมูลเพิ่ม</option><option value="na">ตรวจไม่ได้</option><option value="0">ปกติ</option><option value="all">ทั้งหมด</option></select>
+          <select id="fLvl"><option value="32">เขตผิด + ควรตรวจ</option><option value="3">เขตผิด</option><option value="2">ควรตรวจ</option><option value="1">ข้อมูลเพิ่ม</option><option value="na">ตรวจไม่ได้</option><option value="0">ปกติ</option><option value="fix">แก้แล้ว</option><option value="all">ทั้งหมด</option></select>
         </label>
         <label for="fCh">ช่องทาง <select id="fCh"><option value="">ทั้งหมด</option></select></label>
         <label for="fAmp">เขตในระบบ <select id="fAmp"><option value="">ทั้งหมด</option></select></label>
@@ -268,6 +279,35 @@ a{color:var(--accent)}
         <li><b>แขวง:</b> ใช้แขวงที่ลูกค้าเขียน ถ้าแขวงนั้นอยู่ในเขตที่แนะนำ</li>
         <li><b>รหัสไปรษณีย์:</b> ใช้ของแขวงนั้น ถ้าลูกค้าเขียนรหัสที่ตรงกับแขวง จะใช้รหัสที่ลูกค้าเขียน</li>
         <li><b>ความมั่นใจ:</b> <b>สูง</b> = มีหลักฐานอย่างน้อย 2 แหล่งชี้เขตเดียวกัน <b>ปานกลาง</b> = มีแหล่งเดียว ควรอ่านที่อยู่ก่อนแก้</li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">แก้เขตในหน้าเว็บ แล้วส่งเข้า TMS</h2>
+      <p style="margin:0 0 8px">ทุกออเดอร์ที่ไม่ใช่ปกติ (เขตผิด ควรตรวจ ตรวจไม่ได้ ข้อมูลเพิ่ม) มีปุ่มใต้ช่อง "ที่ควรแก้เป็น"</p>
+      <table class="mini rule"><thead><tr><th>ปุ่ม</th><th>ทำอะไร</th></tr></thead><tbody>
+        <tr><td><b>ยืนยันตามที่แนะนำ</b></td><td>ใช้แขวง เขต จังหวัด รหัสไปรษณีย์ ตามช่อง "ที่ควรแก้เป็น" ถ้าระบบไม่รู้ว่าแขวงไหน จะเปิดช่องให้เลือกแขวงก่อน</td></tr>
+        <tr><td><b>ตามหมุด</b></td><td>มีเมื่อหมุดครั้งก่อนอยู่คนละเขตกับที่แนะนำ ใช้เขตที่หมุดอยู่ ถ้าแขวงเดิมไม่อยู่ในเขตนั้น จะให้เลือกแขวง</td></tr>
+        <tr><td><b>เลือกเขตเอง</b></td><td>เลือกเขต/อำเภอ เรียงจากใกล้ไปไกล (วัดจากหมุดครั้งก่อน ถ้าไม่มีใช้จุดที่ Google เจอ ถ้าไม่มีใช้เขตเดิม) มีเขตของจังหวัดข้างเคียงด้วย จังหวัดเปลี่ยนตามเขตที่เลือก แล้วเลือกแขวง รหัสไปรษณีย์ใส่ให้อัตโนมัติ</td></tr>
+        <tr><td><b>ยกเลิก</b></td><td>คืนค่าเดิม ถ้ากดผิด</td></tr>
+      </tbody></table>
+      <ol class="plain" style="margin-top:10px">
+        <li>กดยืนยันแล้ว ออเดอร์เปลี่ยนเป็น <span class="pill p0">ปกติ</span> มีป้าย "แก้แล้ว" ดูรายการที่แก้ทั้งหมดได้จากตัวกรอง "แก้แล้ว"</li>
+        <li>ทุกการแก้ถูกบันทึกลงแท็บ "แก้เขต" ใน Sheet บันทึกการใช้งาน (เวลา ORDERID ค่าเดิม ค่าใหม่ วิธีที่แก้) ถ้าเปิดไฟล์ที่มีออเดอร์เดิมอีกครั้ง หรือคนอื่นเปิด จะเห็นว่าแก้แล้ว ระบบดึงค่าที่แก้มาให้เฉพาะเมื่อค่าในไฟล์ยังเป็นค่าเดิม</li>
+        <li>กดปุ่ม <b>ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS</b> จะได้ไฟล์ที่ import เข้ามา หน้าตาและคอลัมน์เหมือนเดิมทุกอย่าง เปลี่ยนเฉพาะช่อง TUMBOL, AUMPHER, PROVICE, ZIPCODE ของออเดอร์ที่แก้ (ทุกบรรทัดของออเดอร์นั้น) ชื่อไฟล์ลงท้าย "_แก้เขต" เอาไปอัปโหลดเข้า TMS ได้เลย</li>
+        <li>ช่อง ADDRESS ไม่ถูกแก้</li>
+      </ol>
+    </div>
+
+    <div class="card how">
+      <h2 class="hh">ไฟล์ของวันนี้ แชร์ให้ทั้งทีม</h2>
+      <ol class="plain">
+        <li>คนแรกที่อัปโหลดไฟล์ report_appointment ของวันนี้ ระบบเก็บไฟล์ไว้ใน Google Drive (โฟลเดอร์ "CSC ตรวจเขต – ไฟล์รายวัน")</li>
+        <li>ใครเปิดเว็บในวันเดียวกัน ระบบเปิดไฟล์นั้นให้เลย ไม่ต้องอัปโหลดซ้ำ พร้อมผล Google Maps และเขตที่ทีมแก้ไว้</li>
+        <li>ถ้าอัปโหลดไฟล์ใหม่ในวันเดียวกัน ระบบถามยืนยันก่อน แล้วไฟล์ใหม่จะแทนไฟล์เดิมสำหรับทุกคน เขตที่แก้ไว้ไม่หาย เพราะเก็บแยกตาม ORDERID</li>
+        <li>วันใหม่ หน้าเว็บจะว่าง รอไฟล์ของวันนั้น ไฟล์ของวันก่อนยังอยู่ใน Drive จนกว่าจะลบเอง</li>
+        <li>คนที่เปิดหน้าเว็บค้างไว้ก่อนมีคนอัปโหลดไฟล์ใหม่ ต้องกดรีเฟรชจึงจะเห็นไฟล์ใหม่</li>
+        <li>หน้าเว็บนี้ไม่มีรหัสผ่าน ใครมีลิงก์ก็เปิดไฟล์ของวันนี้ได้ ควรส่งลิงก์ให้เฉพาะคนในทีม</li>
       </ol>
     </div>
 
@@ -756,6 +796,32 @@ a{color:var(--accent)}
     }
     return 'other';
   }
+
+  // ---------- manual fix helpers ----------
+  function tambonsOf(ix, a, p) { // [{t,a,p,zips}] of one amphoe, reference spelling
+    if (!ix._ampT) {
+      ix._ampT = new Map();
+      ix.tamb.forEach(list => list.forEach(r => { const k = key(r.a) + '|' + key(r.p); if (!ix._ampT.has(k)) ix._ampT.set(k, []); ix._ampT.get(k).push(r); }));
+      ix._ampT.forEach(l => l.sort((x, y) => x.t.localeCompare(y.t, 'th')));
+    }
+    return ix._ampT.get(key(a) + '|' + key(p)) || [];
+  }
+  function recCenter(rec) { return [(rec.bbox[0] + rec.bbox[2]) / 2, (rec.bbox[1] + rec.bbox[3]) / 2]; }
+  // districts sorted by distance (m) from a point; 0 = point is inside
+  function nearestAmps(ix, lng, lat, n) {
+    return ix.polys.map(r => ({ r, d: inRec(lng, lat, r) ? 0 : distToRecM(lng, lat, r) }))
+      .sort((x, y) => x.d - y.d).slice(0, n || 40)
+      .map(({ r, d }) => { const t = tambonsOf(ix, r.a, r.p); return { a: t.length ? t[0].a : r.a, p: t.length ? t[0].p : r.p, d: Math.round(d) }; })
+      .filter(o => tambonsOf(ix, o.a, o.p).length);
+  }
+  // anchor point for sorting: last-delivery pin → precise Google point → centre of the system district
+  function fixAnchor(x, ix) {
+    if (x.pin) return { lng: x.pin.lng, lat: x.pin.lat, from: 'หมุดครั้งก่อน' };
+    if (x.geo && geoPrecise(x.geo)) return { lng: x.geo.lng, lat: x.geo.lat, from: 'จุดที่ Google Maps เจอ' };
+    const rec = ix.poly.get(key(x.r.AUMPHER) + '|' + key(x.r.PROVICE));
+    if (rec) { const c = recCenter(rec); return { lng: c[0], lat: c[1], from: 'เขตเดิมในระบบ' }; }
+    return null;
+  }
   const COMPANIES = ['1247', '1230'];
   function companyFilter(rows) { // keep only the companies CSC handles
     if (!rows.length || !('COMPANY_ID' in rows[0])) return { keep: rows, dropped: {}, hasCol: false };
@@ -765,7 +831,7 @@ a{color:var(--accent)}
   }
   const REQUIRED = ['ORDERID', 'CHANNEL', 'ADDRESS', 'TUMBOL', 'AUMPHER', 'PROVICE', 'ZIPCODE'];
   const OPTIONAL = ['LatLng', 'TEL', 'CUSTOMER_NAME'];
-  root.AddrCheck = { buildIndex, checkOrder, crossCheck, applyGeo, geoQuery, geoPrecise, provBox, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
+  root.AddrCheck = { buildIndex, checkOrder, crossCheck, applyGeo, geoQuery, geoPrecise, provBox, tambonsOf, nearestAmps, fixAnchor, companyFilter, COMPANIES, REQUIRED, OPTIONAL, norm, key };
   if (typeof module !== 'undefined') module.exports = root.AddrCheck;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -779,18 +845,113 @@ const REFS_READY=RefLoader.loadRefs(null,(d,n)=>{ if(!RAW) $('refInfo').textCont
   .then(r=>{IX=AddrCheck.buildIndex(r.REF_T,r.REF_POLY); $('refInfo').textContent='ข้อมูลแขวง/เขตพร้อมใช้งาน';})
   .catch(e=>{$('refInfo').textContent='โหลดข้อมูลแขวง/เขตไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้า ('+e.message+')'; throw e;});
 function ix(){ return IX; }
-const LOG_URL='https://script.google.com/macros/s/AKfycbyZiUbZCQC_jUFTZ4RP0m49ttlFgyTOgK8G-WS_IEfQn5EA7aZ-IdIi4gxAlDLifLb3Cw/exec';
+const LOG_URL='https://script.google.com/macros/s/AKfycbweGPiIxRBEdrGAcsMhQ71hD3233zlyJWDzldMfEMo1x2oNmN2HU29nZpsRTQQc7hnwzA/exec';
 function logUse(a,extra){ try{ if(!LOG_URL||LOG_URL.indexOf('__')===0||!/^https?:$/.test(location.protocol)||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return; fetch(LOG_URL,{method:'POST',mode:'no-cors',keepalive:true,body:JSON.stringify(Object.assign({a},extra||{}))}).catch(()=>{}); }catch(e){} }
 function logCheck(){ const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; }); logUse('ตรวจไฟล์',{f:SRCNAME,o:RES.length,x:dropOrders().total,c3:c[3],c2:c[2],na:c.na,c1:c[1],c0:c[0]}); }
 function geoOn(){ return !!LOG_URL && LOG_URL.indexOf('__')!==0 && (window.__GEO_FORCE || (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname))); }
 let GEO_RUN=0; const GEO_MEM=new Map();
-function lockBtns(on){ [['xlsxBtn','ดาวน์โหลด Excel'],['copyBtn','คัดลอกผลไปวาง Excel']].forEach(([id,t])=>{ const b=$(id); b.disabled=on; b.textContent=on?'รอ Google Maps…':t; b.title=on?'รอให้ตรวจกับ Google Maps เสร็จก่อน ไฟล์จะได้มีผลครบ':''; }); }
+// ---------- manual fix (เขตที่ทีมยืนยัน) ----------
+let FIX=new Map(), FIX_LOADED=false, ORIG=null, BYID=new Map();
+const idOf=x=>String(x.r.ORDERID||x.r.ORDERID_ORG||'');
+const effNA=x=>!x.fix&&x.unverifiable, effL=x=>x.fix?0:x.lvl;
+const sysVals=x=>[String(x.r.TUMBOL||''),String(x.r.AUMPHER||''),String(x.r.PROVICE||''),String(x.r.ZIPCODE||'')];
+const canFix=x=>!x.fix&&(x.lvl>0||x.unverifiable);
+function quickTarget(x,a,p,tPref,zPref){ // one-click target; null → need the picker (แขวงไม่ชัด)
+  const L=AddrCheck.tambonsOf(ix(),a,p), K=AddrCheck.norm?(v=>String(v||'').replace(/\s+/g,'')):(v=>v);
+  if(!L.length) return null;
+  const rec=(tPref&&L.find(r=>K(r.t)===K(tPref)))||L.find(r=>K(r.t)===K(x.r.TUMBOL))||(L.length===1?L[0]:null);
+  if(!rec) return null;
+  const z=[zPref,x.r.ZIPCODE].map(v=>String(v||'')).find(v=>rec.zips.includes(v))||rec.zips[0]||'';
+  return [rec.t,rec.a,rec.p,z];
+}
+function postJSON(o){ return fetch(LOG_URL,{method:'POST',body:JSON.stringify(o)}).then(r=>r.json()); }
+function setFix(x,to,how,opt){
+  opt=opt||{};
+  x.fix={to,from:opt.from||sysVals(x),how,at:opt.at||hhmm()}; x._pick=null; FIX.set(idOf(x),x.fix);
+  redraw(x); summary(); updTms();
+  if(!opt.silent&&geoOn()) postJSON({a:'fix',o:idOf(x),from:x.fix.from,to,how,f:SRCNAME}).then(r=>{ if(!r||!r.ok) throw 0; }).catch(()=>toast('บันทึกลง Sheet ไม่สำเร็จ แต่แก้ในหน้านี้แล้ว — ดาวน์โหลดไฟล์ก่อนปิดหน้า'));
+  if(!opt.silent) toast(`แก้ ${idOf(x)} เป็นเขต ${to[1]} แล้ว`);
+}
+function clearFix(x){
+  const f=x.fix; x.fix=null; FIX.delete(idOf(x)); redraw(x); summary(); updTms();
+  if(geoOn()&&f) postJSON({a:'unfix',o:idOf(x),from:f.from,to:f.to,f:SRCNAME}).catch(()=>toast('บันทึกการยกเลิกลง Sheet ไม่สำเร็จ'));
+}
+async function loadFixes(){
+  if(!geoOn()) return;
+  const ids=RES.filter(x=>x.lvl>0||x.unverifiable).map(idOf);
+  try{
+    const r=await postJSON({a:'fixes',ids}); let n=0;
+    RES.forEach(x=>{ const f=r&&r[idOf(x)]; if(!f||x.fix) return;
+      const K=v=>String(v||'').replace(/\s+/g,''), sv=sysVals(x);
+      if(f.from.every((v,i)=>K(v)===K(sv[i]))){ x.fix={to:f.to,from:f.from,how:f.how,at:f.at,saved:1}; FIX.set(idOf(x),x.fix); n++; } });
+    if(n){ summary(); filter(); updTms(); toast(`มี ${n} ออเดอร์ที่ทีมแก้ไว้แล้ว ดึงมาให้แล้ว`); }
+  }catch(e){}
+}
+function redraw(x){ const tr=document.querySelector(`#tbody tr[data-id="${CSS.escape(idOf(x))}"]`); if(tr) tr.outerHTML=row(x); }
+function updTms(){ const b=$('tmsBtn'); if(!b) return; b.textContent=`ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (${FIX.size})`; b.classList.toggle('hidden',!RES.length); }
+function pickerHtml(x){
+  const I=ix(), anc=AddrCheck.fixAnchor(x,I), pk=x._pick||{};
+  let L=anc?AddrCheck.nearestAmps(I,anc.lng,anc.lat,40):[];
+  const K=v=>String(v||'').replace(/\s+/g,'');
+  if(pk.a&&!L.some(o=>K(o.a)===K(pk.a)&&K(o.p)===K(pk.p))) L.unshift({a:pk.a,p:pk.p,d:null});
+  const selA=pk.a?L.find(o=>K(o.a)===K(pk.a)&&K(o.p)===K(pk.p)):L[0];
+  const opts=L.map(o=>`<option value="${esc(o.a+'|'+o.p)}"${o===selA?' selected':''}>${esc(o.a)} · ${esc(o.p.replace('กรุงเทพมหานคร','กรุงเทพฯ'))}${o.d==null?'':o.d===0?' · อยู่ในเขตนี้':' · '+(o.d/1000).toFixed(1)+' กม.'}</option>`).join('');
+  return `<div class="pick" data-id="${esc(idOf(x))}"><div class="muted" style="font-size:12px">เขตเรียงตามระยะจาก${anc?esc(anc.from):'—'}</div>
+    <label>เขต/อำเภอ<select data-f="amp">${opts}</select></label>
+    <label>แขวง/ตำบล<select data-f="tam">${selA?tamOpts(x,selA.a,selA.p,pk.t):''}</select></label>
+    <label>รหัสไปรษณีย์<select data-f="zip"></select></label>
+    <div class="pbtn"><button type="button" class="btn sm" data-act="save">บันทึก</button><button type="button" class="btn ghost sm" data-act="close">ปิด</button></div></div>`;
+}
+function tamOpts(x,a,p,tPref){
+  const L=AddrCheck.tambonsOf(ix(),a,p), K=v=>String(v||'').replace(/\s+/g,'');
+  const sel=(tPref&&L.find(r=>K(r.t)===K(tPref)))||L.find(r=>K(r.t)===K(x.r.TUMBOL))||null;
+  return (sel?'':'<option value="">— เลือกแขวง —</option>')+L.map(r=>`<option${r===sel?' selected':''}>${esc(r.t)}</option>`).join('');
+}
+function fillZip(box,x){
+  const [a,p]=box.querySelector('[data-f=amp]').value.split('|'), t=box.querySelector('[data-f=tam]').value;
+  const rec=AddrCheck.tambonsOf(ix(),a,p).find(r=>r.t===t), zs=rec?rec.zips:[];
+  const pref=[x.suggest&&x.suggest.zip,x.r.ZIPCODE].map(v=>String(v||'')).find(v=>zs.includes(v))||zs[0];
+  box.querySelector('[data-f=zip]').innerHTML=zs.map(z=>`<option${z===pref?' selected':''}>${esc(z)}</option>`).join('');
+}
+function fixCell(x){
+  if(x.fix){ const f=x.fix;
+    return `<div class="fixd">✓ แก้แล้ว${f.saved?' (จาก Sheet)':''}: แขวง ${esc(f.to[0])} <b>เขต ${esc(f.to[1])}</b>${f.to[2]!==f.from[2]?' จ.'+esc(f.to[2]):''} ${esc(f.to[3])}<small>${esc(f.how)} · ${esc(f.at||'')}</small><button type="button" class="btn ghost sm" data-act="undo">ยกเลิก</button></div>`; }
+  if(!canFix(x)) return '';
+  const g=x.suggest, p=x.pin, K=v=>String(v||'').replace(/\s+/g,'');
+  const b=[];
+  if(g) b.push(`<button type="button" class="btn sm" data-act="sug">ยืนยันตามที่แนะนำ: เขต ${esc(g.a)}</button>`);
+  if(p&&p.amp&&(!g||K(p.amp)!==K(g.a))) b.push(`<button type="button" class="btn sm${g?' ghost':''}" data-act="pin">ตามหมุด: เขต ${esc(p.amp)}</button>`);
+  b.push(`<button type="button" class="btn ghost sm" data-act="pick">เลือกเขตเอง</button>`);
+  return `<div class="fixbar">${b.join('')}</div>`+(x._pick?pickerHtml(x):'');
+}
+async function downloadTMS(){
+  if(!FIX.size){ toast('ยังไม่มีออเดอร์ที่แก้'); return; }
+  try{
+    const wb=XLSX.read(ORIG.bytes,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]], rg=XLSX.utils.decode_range(ws['!ref']), E=XLSX.utils.encode_cell;
+    let hr=rg.s.r; const col={};
+    for(let c=rg.s.c;c<=rg.e.c;c++){ const cl=ws[E({r:hr,c})]; if(cl) col[String(cl.v).trim()]=c; }
+    const val=(r,c)=>{ if(c==null) return ''; const cl=ws[E({r,c})]; return cl?String(cl.w!=null?cl.w:cl.v).trim():''; };
+    const T=[['TUMBOL',0],['AUMPHER',1],['PROVICE',2],['ZIPCODE',3]]; let rows=0; const ids=new Set();
+    for(let r=hr+1;r<=rg.e.r;r++){
+      const id=val(r,col.ORDERID)||val(r,col.ORDERID_ORG), f=FIX.get(id); if(!f) continue;
+      T.forEach(([n,i])=>{ const c=col[n]; if(c==null) return; const a=E({r,c}), old=ws[a], v=String(f.to[i]);
+        ws[a]=(old&&old.t==='n'&&/^\d+$/.test(v))?{t:'n',v:+v}:{t:'s',v}; });
+      rows++; ids.add(id);
+    }
+    // line breaks: keep \n only (a bare \r would be written as the literal text "_x000d_")
+    wb.SheetNames.forEach(n=>{ const sh=wb.Sheets[n]; Object.keys(sh).forEach(k=>{ if(k[0]==='!') return; const c=sh[k]; if(c&&c.t==='s'&&typeof c.v==='string'&&c.v.indexOf('\r')>=0){ c.v=c.v.replace(/\r\n?/g,'\n'); delete c.w; delete c.h; delete c.r; } }); });
+    const base=(ORIG.name||'report').replace(/\.[^.]+$/,'');
+    XLSX.writeFile(wb,base+'_แก้เขต.xlsx');
+    toast(`ดาวน์โหลดแล้ว: แก้ ${ids.size} ออเดอร์ (${rows} แถว)`); logUse('ดาวน์โหลดไฟล์แก้เขต',{f:SRCNAME,o:ids.size});
+  }catch(e){ toast('สร้างไฟล์ไม่ได้: '+e.message); }
+}
+function lockBtns(on){ [['xlsxBtn','ดาวน์โหลด Excel'],['copyBtn','คัดลอกผลไปวาง Excel'],['tmsBtn',null]].forEach(([id,t])=>{ const b=$(id); b.disabled=on; b.textContent=on?'รอ Google Maps…':(t||`ดาวน์โหลดไฟล์แก้เขตสำหรับ TMS (${FIX.size})`); b.title=on?'รอให้ตรวจกับ Google Maps เสร็จก่อน ไฟล์จะได้มีผลครบ':''; }); }
 const hhmm=()=>new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
 async function geoPass(){
   const box=$('geoInfo');
   if(!geoOn()||!RES.length){ lockBtns(false); return; }
   const run=++GEO_RUN, tol=+$('tol').value||0, I=ix();
-  const todo=RES.filter(x=>x.unverifiable||x.lvl===2).map(x=>({x,q:AddrCheck.geoQuery(x),k:String(x.r.ORDERID||'')})).filter(o=>o.q);
+  const todo=RES.filter(x=>!x.fix&&(x.unverifiable||x.lvl===2)).map(x=>({x,q:AddrCheck.geoQuery(x),k:String(x.r.ORDERID||'')})).filter(o=>o.q);
   if(!todo.length){ box.className='geobox hidden'; lockBtns(false); return; }
   const st={ok:0,other:0,none:0,weak:0,err:0,na:0}; let done=0, seen=0, quota=false, net=false;
   const n=todo.length.toLocaleString();
@@ -829,12 +990,32 @@ async function geoPass(){
 }
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 
-function readFile(f){
-  $('fileInfo').textContent='กำลังอ่าน '+f.name+' …'; SRCNAME=f.name;
-  const r=new FileReader();
-  r.onload=e=>{
+// ---------- ไฟล์ของวันนี้ แชร์ให้ทั้งทีม (เก็บใน Google Drive ผ่าน Apps Script) ----------
+function toB64(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+function fromB64(b){ const s=atob(b), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
+function shareMsg(cls,html){ const e=$('shareInfo'); e.className='share '+cls; e.innerHTML=html; }
+async function sharedInfo(){ try{ const r=await postJSON({a:'current'}); return r&&r.name?r:null; }catch(e){ return null; } }
+async function shareUpload(bytes,name){
+  shareMsg('run',`⏳ กำลังบันทึกไฟล์ <b>${esc(name)}</b> ให้ทีม …`);
+  try{ const r=await postJSON({a:'upload',name,b64:toB64(bytes)}); if(!r||!r.ok) throw 0;
+    shareMsg('done',`✓ แชร์ไฟล์ <b>${esc(name)}</b> ให้ทีมแล้ว (อัปโหลดเมื่อ ${esc(r.at)}) ใครเปิดเว็บวันนี้จะเห็นไฟล์นี้ทันที ไม่ต้องอัปโหลดซ้ำ`); }
+  catch(e){ shareMsg('warn','⚠️ แชร์ไฟล์ให้ทีมไม่สำเร็จ ไฟล์นี้อยู่แค่ในเครื่องนี้ ลองอัปโหลดใหม่อีกครั้ง'); }
+}
+async function loadShared(){
+  if(!geoOn()||RAW) return;
+  const cur=await sharedInfo(); if(!cur||RAW) return;
+  shareMsg('run',`⏳ กำลังเปิดไฟล์ของวันนี้ <b>${esc(cur.name)}</b> (อัปโหลดเมื่อ ${esc(cur.at)}) …`);
+  try{ const r=await postJSON({a:'getfile'}); if(!r||!r.b64) throw 0; if(RAW) return;
+    processBytes(fromB64(r.b64),r.name,true);
+    shareMsg('done',`📂 ไฟล์ของวันนี้จากทีม: <b>${esc(r.name)}</b> · อัปโหลดเมื่อ ${esc(r.at)} — ถ้ามีไฟล์ใหม่กว่า อัปโหลดเพื่อแทนได้เลย`); }
+  catch(e){ shareMsg('warn','⚠️ เปิดไฟล์ของวันนี้ไม่สำเร็จ ลองรีเฟรชหน้า หรืออัปโหลดไฟล์เอง'); }
+}
+function processBytes(bytes,name,fromShare){
+  const f={name}; $('fileInfo').textContent='กำลังอ่าน '+name+' …'; SRCNAME=name;
+  return (()=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      ORIG={bytes,name:f.name}; FIX=new Map(); FIX_LOADED=false;
+      const wb=XLSX.read(bytes,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       RAW=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
       if(!RAW.length) throw new Error('ชีตแรกไม่มีข้อมูล');
@@ -843,7 +1024,19 @@ function readFile(f){
       if(missOpt.length) toast('ไม่พบคอลัมน์ '+missOpt.join(', ')+' — ตรวจได้น้อยลง');
       $('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'+(IX?'':' · รอข้อมูลแขวง/เขต…');
       REFS_READY.then(()=>{$('fileInfo').textContent=f.name+' · '+RAW.length.toLocaleString()+' แถว'; run(); logCheck();});
-    }catch(err){$('fileInfo').textContent='อ่านไฟล์ไม่ได้: '+err.message+' — ตรวจว่าเป็นไฟล์ report_appointment แบบ .xlsx';}
+      return true;
+    }catch(err){$('fileInfo').textContent='อ่านไฟล์ไม่ได้: '+err.message+' — ตรวจว่าเป็นไฟล์ report_appointment แบบ .xlsx'; return false;}
+  })();
+}
+function readFile(f){
+  const r=new FileReader();
+  r.onload=async e=>{
+    const bytes=new Uint8Array(e.target.result);
+    if(geoOn()){
+      const cur=await sharedInfo();
+      if(cur&&!confirm(`มีไฟล์ของวันนี้อยู่แล้ว: ${cur.name} (อัปโหลดเมื่อ ${cur.at})\n\nจะแทนด้วย ${f.name} สำหรับทุกคนไหม?\n(เขตที่ทีมแก้ไว้ไม่หาย)`)){ toast('ยกเลิก — ยังใช้ไฟล์เดิมของวันนี้'); $('file').value=''; return; }
+    }
+    if(processBytes(bytes,f.name)&&geoOn()) shareUpload(bytes,f.name);
   };
   r.readAsArrayBuffer(f);
 }
@@ -854,13 +1047,15 @@ function run(){
   cf.keep.forEach(r=>{const id=r.ORDERID||r.ORDERID_ORG; if(!byId.has(id)) byId.set(id,{r,lines:0,total:0}); const o=byId.get(id); o.lines++; o.total+=parseFloat(r.TOTAL_INCLUDE_VAT)||0;});
   RES=AddrCheck.crossCheck([...byId.values()].map(({r,lines,total})=>Object.assign({r,lines,total},AddrCheck.checkOrder(r,I,{pinToleranceM:tol}))));
   const rank=x=>x.unverifiable?0.5:x.lvl; RES.sort((a,b)=>rank(b)-rank(a));
+  BYID=new Map(RES.map(x=>[idOf(x),x])); RES.forEach(x=>{ const f=FIX.get(idOf(x)); if(f) x.fix=f; });
   $('intro').classList.add('hidden'); $('results').classList.remove('hidden'); $('copyBtn').classList.remove('hidden'); $('xlsxBtn').classList.remove('hidden');
   const chs=[...new Set(RES.map(x=>x.r.CHANNEL))].sort(); $('fCh').innerHTML='<option value="">ทั้งหมด</option>'+chs.map(c=>`<option>${esc(c)}</option>`).join('');
   const amps=[...new Set(RES.map(x=>x.r.AUMPHER))].sort((a,b)=>a.localeCompare(b,'th')); $('fAmp').innerHTML='<option value="">ทั้งหมด</option>'+amps.map(c=>`<option>${esc(c)}</option>`).join('');
-  summary(); filter(); geoPass();
+  summary(); filter(); updTms();
+  if(!FIX_LOADED){ FIX_LOADED=true; lockBtns(true); loadFixes().then(geoPass); } else geoPass();
 }
 function summary(){
-  const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(x.unverifiable) c.na++; else c[x.lvl]++; });
+  const c={3:0,2:0,1:0,0:0,na:0}; RES.forEach(x=>{ if(effNA(x)) c.na++; else c[effL(x)]++; });
   const t=[['all',RES.length,'ออเดอร์ทั้งหมด',''],['3',c[3],'เขตผิด','c3'],['2',c[2],'ควรตรวจ','c2'],['na',c.na,'ตรวจไม่ได้ (ไม่มีข้อมูล)','cna'],['1',c[1],'ข้อมูลเพิ่ม','c1'],['0',c[0],'ปกติ','c0']];
   $('tiles').innerHTML=t.map(([k,n,l,cl])=>`<button type="button" class="tile ${cl}" data-l="${k}" aria-pressed="false"><div class="n">${n.toLocaleString()}</div><div class="l">${l}</div></button>`).join('');
   $('tiles').querySelectorAll('.tile').forEach(b=>b.onclick=()=>{$('fLvl').value=b.dataset.l;filter();});
@@ -877,7 +1072,7 @@ function summary(){
   $('byPair').innerHTML=top.length?'<table class="mini"><tbody>'+top.map(([k,n])=>`<tr><td style="width:55%">${esc(k)}</td><td><div class="bar" style="width:${Math.max(4,n/mx*100)}%"></div></td><td class="num">${n}</td></tr>`).join('')+'</tbody></table><p class="muted" style="font-size:13px;margin:8px 0 0">ถ้าคู่เดิมโผล่ซ้ำทุกวัน มักเป็นการแมปรหัสไปรษณีย์เป็นเขตเดียวของช่องทาง ควรแจ้งแก้ที่ต้นทาง</p>':'<p class="muted">ไม่พบ</p>';
 }
 const ST=['เขตผิด','ควรตรวจ','ตรวจไม่ได้','ข้อมูลเพิ่ม','ปกติ'];
-function chanCounts(){ const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; if(!ch[k]){ch[k]={n:0}; ST.forEach(s=>ch[k][s]=0);} ch[k].n++; ch[k][x.unverifiable?'ตรวจไม่ได้':LV[x.lvl]]++;}); return ch; }
+function chanCounts(){ const ch={}; RES.forEach(x=>{const k=x.r.CHANNEL||'-'; if(!ch[k]){ch[k]={n:0}; ST.forEach(s=>ch[k][s]=0);} ch[k].n++; ch[k][effNA(x)?'ตรวจไม่ได้':LV[effL(x)]]++;}); return ch; }
 function dropOrders(){ // DROPPED counts rows; convert to orders
   const ids={}; RAW.forEach(r=>{const c=String(r.COMPANY_ID||'').trim(); if(!AddrCheck.COMPANIES.includes(c)&&('COMPANY_ID' in r)){ (ids[c||'(ว่าง)']=ids[c||'(ว่าง)']||new Set()).add(r.ORDERID||r.ORDERID_ORG); }});
   const e=Object.entries(ids).map(([k,v])=>[k,v.size]); return {total:e.reduce((a,b)=>a+b[1],0), text:e.map(([k,v])=>`${k} ${v.toLocaleString()}`).join(', '), list:e};
@@ -885,7 +1080,8 @@ function dropOrders(){ // DROPPED counts rows; convert to orders
 function filter(){
   lvlFilter=$('fLvl').value; const q=$('q').value.trim().toLowerCase(), ch=$('fCh').value, amp=$('fAmp').value;
   view=RES.filter(x=>{
-    if(lvlFilter==='32'){if(x.lvl<2) return false;} else if(lvlFilter==='na'){if(!x.unverifiable) return false;} else if(lvlFilter==='0'){if(x.lvl!==0||x.unverifiable) return false;} else if(lvlFilter!=='all' && x.lvl!==+lvlFilter) return false;
+    const L=effL(x), NA=effNA(x);
+    if(lvlFilter==='32'){if(L<2) return false;} else if(lvlFilter==='na'){if(!NA) return false;} else if(lvlFilter==='0'){if(L!==0||NA) return false;} else if(lvlFilter==='fix'){if(!x.fix) return false;} else if(lvlFilter!=='all' && L!==+lvlFilter) return false;
     if(ch && x.r.CHANNEL!==ch) return false; if(amp && x.r.AUMPHER!==amp) return false;
     if(q){const s=[x.r.ORDERID,x.r.CUSTOMER_NAME,x.r.TEL,x.r.ADDRESS,x.r.TUMBOL,x.r.AUMPHER,x.suggest&&x.suggest.a].join(' ').toLowerCase(); if(!s.includes(q)) return false;}
     return true;});
@@ -898,12 +1094,12 @@ function row(x){
   const g=x.suggest;
   const conf=g?(g.src.length>=2?'มั่นใจสูง':'มั่นใจปานกลาง'):'';
   const sug=g?`<div class="sug">${g.t?'แขวง '+esc(g.t)+'<br>':''}${g.ampChanged?'<b>เขต '+esc(g.a)+'</b>':'เขต '+esc(g.a)}${g.p!==r.PROVICE?' จ.'+esc(g.p):''}${g.zip?'<br>'+esc(g.zip):''}<small>${conf} · จาก ${g.src.map(esc).join(', ')}</small></div>`:'<span class="muted">—</span>';
-  return `<tr class="l${x.lvl}"><td>${x.unverifiable?'<span class="pill pna">ตรวจไม่ได้</span>':`<span class="pill p${x.lvl}">${LV[x.lvl]}</span>`}</td>
+  return `<tr class="l${effL(x)}${x.fix?' fixed':''}" data-id="${esc(idOf(x))}"><td>${x.fix?'<span class="pill p0">ปกติ</span><div class="ftag">แก้แล้ว</div>':x.unverifiable?'<span class="pill pna">ตรวจไม่ได้</span>':`<span class="pill p${x.lvl}">${LV[x.lvl]}</span>`}</td>
   <td><div class="mono">${esc(r.ORDERID)}</div><div class="muted" style="font-size:13px">${esc(r.CHANNEL)} · ${esc(r.CUSTOMER_NAME)}</div></td>
   <td class="sys">แขวง <b>${esc(r.TUMBOL)||'—'}</b><br>เขต <b>${esc(r.AUMPHER)}</b><br><span class="muted">${esc(r.PROVICE)} ${esc(r.ZIPCODE)}</span></td>
   <td class="addr">${esc(x.cust)||'<span class="muted">—</span>'}</td>
   <td><div class="av ${/^ไม่ตรง/.test(x.addrVsAmp)?'bad':(/^ตรง/.test(x.addrVsAmp)?'good':'')}">ที่อยู่ลูกค้า vs AUMPHER: <b>${esc(x.addrVsAmp)}</b></div>${x.issues.length?'<ul class="iss">'+x.issues.sort((a,b)=>b.lvl-a.lvl).map(i=>`<li class="i${i.lvl}">${esc(i.msg)}</li>`).join('')+'</ul>':(x.unverifiable?'<span class="muted">ไม่มีชื่อเขต แขวง รหัสไปรษณีย์ หรือหมุดให้ตรวจ — ถามลูกค้าตอนโทรนัด</span>':'<span class="muted">ไม่พบข้อขัดแย้ง</span>')}</td>
-  <td>${sug}</td><td>${pin}</td></tr>`;
+  <td>${sug}${fixCell(x)}</td><td>${pin}</td></tr>`;
 }
 function more(){
   const chunk=view.slice(shown,shown+PAGE); $('tbody').insertAdjacentHTML('beforeend',chunk.map(row).join('')); shown+=chunk.length;
@@ -911,8 +1107,8 @@ function more(){
   $('more').classList.toggle('hidden',shown>=view.length);
 }
 const HEAD=['ระดับ','ที่อยู่ลูกค้า vs AUMPHER','ORDERID','COMPANY_ID','CHANNEL','CUSTOMER_NAME','TEL','TUMBOL','AUMPHER','PROVICE','ZIPCODE','แนะนำ_แขวง','แนะนำ_เขต','แนะนำ_จังหวัด','แนะนำ_รหัสไปรษณีย์','ความมั่นใจ','หลักฐาน','สิ่งที่พบ','ที่อยู่ลูกค้า','LatLng','Google Maps','ผลตรวจจริง (ถูก/ผิด)','เขตที่แก้จริง','หมายเหตุ'];
-const LVNAME=x=>x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
-function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,x.geoTxt||'','','','']); }
+const LVNAME=x=>x.fix?'ปกติ (แก้แล้ว)':x.unverifiable?'ตรวจไม่ได้':LV[x.lvl];
+function rowsOf(list){ return list.map(x=>[LVNAME(x),x.addrVsAmp,x.r.ORDERID,x.r.COMPANY_ID,x.r.CHANNEL,x.r.CUSTOMER_NAME,x.r.TEL,x.r.TUMBOL,x.r.AUMPHER,x.r.PROVICE,x.r.ZIPCODE,x.suggest?x.suggest.t||'':'',x.suggest?x.suggest.a:'',x.suggest?x.suggest.p:'',x.suggest?x.suggest.zip||'':'',x.suggest?(x.suggest.src.length>=2?'สูง':'ปานกลาง'):'',x.suggest?x.suggest.src.join(', '):'',x.issues.map(i=>i.msg).join(' | '),x.cust,x.r.LatLng,x.geoTxt||'','',x.fix?x.fix.to[1]:'',x.fix?`${x.fix.how} ${x.fix.at||''}: ${x.fix.from[0]}/${x.fix.from[1]}/${x.fix.from[2]} ${x.fix.from[3]} → ${x.fix.to[0]}/${x.fix.to[1]}/${x.fix.to[2]} ${x.fix.to[3]}`:'']); }
 function copyTSV(){
   const cl=s=>String(s==null?'':s).replace(/[\t\r\n]+/g,' ');
   const lines=[HEAD.join('\t')].concat(rowsOf(view).map(r=>r.map(cl).join('\t')));
@@ -922,7 +1118,7 @@ function downloadXLSX(){
   try{
     const wb=XLSX.utils.book_new();
     const mk=(list)=>{ const ws=XLSX.utils.aoa_to_sheet([HEAD].concat(rowsOf(list))); ws['!cols']=HEAD.map((h,i)=>({wch:[10,30,26,10,10,18,12,14,14,14,8,14,14,12,10,9,24,60,60,22,40,14,14,20][i]||14})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:list.length,c:HEAD.length-1}})}; return ws; };
-    const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0}; RES.forEach(x=>c[LVNAME(x)]++);
+    const c={'เขตผิด':0,'ควรตรวจ':0,'ตรวจไม่ได้':0,'ข้อมูลเพิ่ม':0,'ปกติ':0,'ปกติ (แก้แล้ว)':0}; RES.forEach(x=>{ const k=LVNAME(x); c[k]=(c[k]||0)+1; });
     const chc=chanCounts(); const ch={}; Object.entries(chc).forEach(([k,v])=>ch[k]=[v.n].concat(ST.map(s=>v[s])));
     const pr={}; RES.filter(x=>x.lvl>=2&&x.suggest&&x.suggest.ampChanged).forEach(x=>{const k=x.r.AUMPHER+' → '+x.suggest.a; pr[k]=(pr[k]||0)+1;});
     const dz=dropOrders();
@@ -931,8 +1127,9 @@ function downloadXLSX(){
       .concat([[],['เขตในระบบ → เขตที่ควรเป็น','จำนวน']]).concat(Object.entries(pr).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]));
     const ws0=XLSX.utils.aoa_to_sheet(sum); ws0['!cols']=[{wch:34},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10}];
     XLSX.utils.book_append_sheet(wb,ws0,'สรุป');
-    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.lvl>=2)),'ต้องแก้-ตรวจ');
-    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.unverifiable)),'ตรวจไม่ได้');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>effL(x)>=2)),'ต้องแก้-ตรวจ');
+    XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>effNA(x))),'ตรวจไม่ได้');
+    if(FIX.size) XLSX.utils.book_append_sheet(wb,mk(RES.filter(x=>x.fix)),'แก้แล้ว');
     XLSX.utils.book_append_sheet(wb,mk(RES),'ทั้งหมด');
     const m=String(SRCNAME).match(/(20\d{6})/); const d=m?m[1]:new Date().toISOString().slice(0,10).replace(/-/g,'');
     XLSX.writeFile(wb,`ผลตรวจเขต_${d}.xlsx`);
@@ -948,8 +1145,25 @@ $('tol').onchange=()=>{if(RAW) run();};
 ['q'].forEach(id=>$(id).addEventListener('input',filter));
 ['fLvl','fCh','fAmp'].forEach(id=>$(id).addEventListener('change',filter));
 function route(){ const how=location.hash==='#how'; $('pageCheck').classList.toggle('hidden',how); $('pageHow').classList.toggle('hidden',!how); $('tabHow').classList.toggle('on',how); $('tabCheck').classList.toggle('on',!how); $('copyBtn').style.visibility=$('xlsxBtn').style.visibility=how?'hidden':''; }
-window.addEventListener('hashchange',route); route(); logUse('เปิดหน้าเว็บ');
-$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX;
+window.addEventListener('hashchange',route); route(); logUse('เปิดหน้าเว็บ'); loadShared();
+$('more').onclick=more; $('copyBtn').onclick=copyTSV; $('xlsxBtn').onclick=downloadXLSX; $('tmsBtn').onclick=downloadTMS;
+$('tbody').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return; const tr=b.closest('tr[data-id]'); const x=tr&&BYID.get(tr.dataset.id); if(!x) return;
+  const act=b.dataset.act, g=x.suggest, p=x.pin;
+  if(act==='sug'){ const t=quickTarget(x,g.a,g.p,g.t,g.zip); if(t) setFix(x,t,'ยืนยันตามที่แนะนำ'); else { x._pick={a:g.a,p:g.p,t:g.t}; redraw(x); toast('เลือกแขวงก่อนบันทึก'); } }
+  else if(act==='pin'){ const pv=p.prov||x.r.PROVICE, T=AddrCheck.tambonsOf(ix(),p.amp,pv), a=T.length?T[0].a:p.amp, pp=T.length?T[0].p:pv, t=quickTarget(x,a,pp,null,null); if(t) setFix(x,t,'ยืนยันตามหมุด'); else { x._pick={a,p:pp}; redraw(x); toast('เลือกแขวงก่อนบันทึก'); } }
+  else if(act==='pick'){ x._pick=x._pick?null:{}; redraw(x); }
+  else if(act==='close'){ x._pick=null; redraw(x); }
+  else if(act==='undo'){ clearFix(x); }
+  else if(act==='save'){ const box=b.closest('.pick'); const [a,pp]=box.querySelector('[data-f=amp]').value.split('|'), t=box.querySelector('[data-f=tam]').value, z=box.querySelector('[data-f=zip]').value;
+    if(!t){ toast('เลือกแขวงก่อนบันทึก'); return; } setFix(x,[t,a,pp,z],'เลือกเอง'); }
+  if(x._pick){ const box=document.querySelector(`#tbody tr[data-id="${CSS.escape(idOf(x))}"] .pick`); if(box) fillZip(box,x); }
+});
+$('tbody').addEventListener('change',e=>{
+  const s=e.target.closest('.pick select'); if(!s) return; const box=s.closest('.pick'), x=BYID.get(box.dataset.id); if(!x) return;
+  if(s.dataset.f==='amp'){ const [a,p]=s.value.split('|'); box.querySelector('[data-f=tam]').innerHTML=tamOpts(x,a,p,null); }
+  if(s.dataset.f!=='zip') fillZip(box,x);
+});
 })();
 </script>
 </body>
